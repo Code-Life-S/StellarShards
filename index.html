@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Stellar Shards</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="hud" class="hidden">
+      <div id="hud-left">
+        <div id="score-display">Score: <span id="score">0</span></div>
+        <div id="timer-display">&#9201; <span id="timer">0</span>s</div>
+      </div>
+      <div id="hud-center">
+        <div id="weapon-display">
+          <span id="weapon-name">BASIC</span>
+          <span id="weapon-level">Lv.1</span>
+        </div>
+      </div>
+      <div id="hud-right">
+        <span id="currency-display">&#9889; <span id="currency">0</span></span>
+        <span id="lives-display">&#10084;&#65039;&#10084;&#65039;&#10084;&#65039;</span>
+        <span id="shield-display" class="hidden">&#128737;</span>
+      </div>
+    </div>
+
+    <div id="title-screen">
+      <h1 id="title-logo">STELLAR SHARDS</h1>
+      <p id="title-sub">Survive. Collect. Destroy.</p>
+      <div id="title-controls">
+        <p>ZQSD to move</p>
+        <p>SPACE to shoot</p>
+        <p>A/E switch weapons</p>
+      </div>
+      <p id="title-start">Press SPACE to start</p>
+    </div>
+
+    <div id="level-complete" class="hidden">
+      <h1>LEVEL COMPLETE</h1>
+      <p>Score: <span id="lc-score">0</span></p>
+      <p>Collected: <span id="lc-currency">+0</span></p>
+      <p id="lc-hint">Click to continue</p>
+    </div>
+
+    <div id="shop-overlay" class="hidden">
+      <h1>SHOP</h1>
+      <div id="shop-header">
+        <span id="shop-currency-label">&#9889; <span id="shop-currency-amount">0</span></span>
+        <span id="shop-level-label">Level <span id="shop-level">2</span></span>
+      </div>
+      <div id="shop-cards"></div>
+      <div id="shop-actions">
+        <button id="shop-reroll">REROLL (<span id="shop-reroll-count">2 free</span>)</button>
+        <button id="shop-skip">SKIP</button>
+      </div>
+    </div>
+
+    <div id="game-over" class="hidden">
+      <h1>Game Over</h1>
+      <p>Level Reached: <span id="final-level">1</span></p>
+      <p>Final Score: <span id="final-score">0</span></p>
+      <p>&#9889; <span id="final-currency">0</span></p>
+      <p id="restart-hint">Press SPACE to restart</p>
+    </div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/missile.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/falling-object.js"></script>
+  <script src="js/spawner.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/music.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
