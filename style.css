@@ -77,26 +77,38 @@ html, body {
   align-items: center;
 }
 
-#weapon-display {
+#module-icons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(100, 200, 255, 0.3);
-  border-radius: 6px;
-  padding: 4px 12px;
-  font-size: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-#weapon-name {
-  color: #64c8ff;
+.module-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 1px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #666;
 }
 
-#weapon-level {
-  color: #fbbf24;
-  font-weight: 600;
+.module-icon.owned {
+  border-style: solid;
+  text-shadow: 0 0 6px currentColor;
+}
+
+.module-icon.missing {
+  opacity: 0.35;
+}
+
+.module-spacer {
+  width: 8px;
 }
 
 #hud-right {
@@ -445,9 +457,12 @@ html, body {
   #score-display {
     font-size: 16px;
   }
-  #weapon-display {
-    font-size: 13px;
-    padding: 2px 8px;
+  #module-icons {
+    gap: 4px;
+  }
+  .module-icon {
+    font-size: 10px;
+    padding: 1px 4px;
   }
   #shop-cards {
     flex-direction: column;

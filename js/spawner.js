@@ -46,11 +46,11 @@ const Spawner = {
 
     if (timestamp - this.lastSpawn > this.spawnInterval) {
       this.lastSpawn = timestamp;
-      this.spawn(objects, playLeft, playRight, difficulty);
+      this.spawn(objects, playLeft, playRight, difficulty, level);
     }
   },
 
-  spawn(objects, playLeft, playRight, difficulty) {
+  spawn(objects, playLeft, playRight, difficulty, level) {
     const margin = 25;
     const x = playLeft + margin + Math.random() * (playRight - playLeft - margin * 2);
     let type;
@@ -62,7 +62,7 @@ const Spawner = {
     }
     const isFast = Math.random() < difficulty.fastChance;
     const speed = isFast ? difficulty.fastFallSpeed + Math.random() * 0.5 : difficulty.baseFallSpeed + Math.random() * 0.8;
-    const obj = new FallingObject(x, type, speed, playLeft, playRight);
+    const obj = new FallingObject(x, type, speed, playLeft, playRight, level);
     objects.push(obj);
   },
 

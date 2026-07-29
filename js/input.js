@@ -43,14 +43,6 @@ const Input = {
     return false;
   },
 
-  switchLeft() {
-    return !!(this.justPressed['a'] || this.justPressed['A']);
-  },
-
-  switchRight() {
-    return !!(this.justPressed['e'] || this.justPressed['E']);
-  },
-
   clearPressed() {
     this.justPressed = {};
   }

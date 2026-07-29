@@ -7,7 +7,7 @@ const OBJECT_TYPES = {
 };
 
 class FallingObject {
-  constructor(x, type, speed, playLeft, playRight) {
+  constructor(x, type, speed, playLeft, playRight, level) {
     this.baseX = x;
     this.x = x;
     this.y = -20;
@@ -27,7 +27,11 @@ class FallingObject {
     this.label = cfg.label;
     this.destroyable = cfg.destroyable;
     this.points = cfg.points;
-    this.hitPoints = type === 'SKULL' ? 1 : 0;
+    if (type === 'SKULL') {
+      this.hitPoints = Math.min(1 + Math.floor(((level || 1) - 1) / 5), 3);
+    } else {
+      this.hitPoints = 0;
+    }
   }
 
   update(canvasHeight) {

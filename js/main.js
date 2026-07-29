@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Game.buySelectedCard();
       }
     } else if (Game.phase === 'shop') {
-      if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+      if (e.key === 'q' || e.key === 'Q' || e.key === 'ArrowLeft') {
         e.preventDefault();
         Game.shopNavigate(-1);
       } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {

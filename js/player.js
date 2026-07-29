@@ -3,22 +3,20 @@ const Player = {
   y: 550,
   radius: 18,
   trail: [],
-  weapons: [],
-  activeWeaponIdx: 0,
+  augments: [],
   lastShot: 0,
 
   init(canvasWidth, canvasHeight) {
     this.x = canvasWidth / 2;
     this.y = canvasHeight - 50;
     this.trail = [];
-    this.weapons = [{ type: 'BASIC', level: 1 }];
-    this.activeWeaponIdx = 0;
+    this.augments = [];
     this.lastShot = 0;
   },
 
-  resetWeapons() {
-    this.weapons = [{ type: 'BASIC', level: 1 }];
-    this.activeWeaponIdx = 0;
+  resetAugments() {
+    this.augments = [];
+    this.lastShot = 0;
   },
 
   update(playLeft, playRight, playTop, playBottom) {
@@ -42,35 +40,32 @@ const Player = {
     if (this.trail.length > 12) {
       this.trail.pop();
     }
-
-    if (Input.switchLeft()) {
-      this.switchWeapon(-1);
-    }
-    if (Input.switchRight()) {
-      this.switchWeapon(1);
-    }
   },
 
-  switchWeapon(dir) {
-    if (this.weapons.length < 2) return;
-    this.activeWeaponIdx = (this.activeWeaponIdx + dir + this.weapons.length) % this.weapons.length;
-    document.getElementById('weapon-name').textContent = this.weapons[this.activeWeaponIdx].type;
-    document.getElementById('weapon-level').textContent = 'Lv.' + this.weapons[this.activeWeaponIdx].level;
+  hasAugment(type) {
+    return this.augments.some(a => a.type === type);
   },
 
-  getActiveWeapon() {
-    return this.weapons[this.activeWeaponIdx];
+  getAugment(type) {
+    return this.augments.find(a => a.type === type);
+  },
+
+  addAugment(type) {
+    if (this.hasAugment(type)) {
+      const a = this.getAugment(type);
+      if (a.level < 5) a.level++;
+    } else {
+      this.augments.push({ type, level: 1 });
+    }
   },
 
   canShoot(timestamp) {
-    const weapon = this.getActiveWeapon();
-    const cfg = WEAPONS[weapon.type].levels[weapon.level - 1];
+    const cfg = buildMissileConfig(this.augments);
     return timestamp - this.lastShot >= cfg.fireRate;
   },
 
   fire(timestamp) {
-    const weapon = this.getActiveWeapon();
-    const cfg = WEAPONS[weapon.type].levels[weapon.level - 1];
+    const cfg = buildMissileConfig(this.augments);
     this.lastShot = timestamp;
 
     const missiles = [];
@@ -81,42 +76,12 @@ const Player = {
       const angle = startAngle + i * angleStep;
       const vx = Math.sin(angle) * cfg.speed;
       const vy = -Math.cos(angle) * cfg.speed;
-      const m = new Missile(this.x, this.y - this.radius, vx, vy, weapon.type, weapon.level);
+      const m = new Missile(this.x, this.y - this.radius, vx, vy, cfg);
       missiles.push(m);
     }
 
-    const soundMap = {
-      BASIC: 'shoot',
-      SPREAD: 'spread',
-      RAPID: 'rapid',
-      HEAVY: 'heavy',
-      PIERCING: 'piercing'
-    };
-    Audio[soundMap[weapon.type]]();
-
+    Audio.shoot();
     return missiles;
-  },
-
-  hasWeapon(type) {
-    return this.weapons.some(w => w.type === type);
-  },
-
-  getWeapon(type) {
-    return this.weapons.find(w => w.type === type);
-  },
-
-  unlockWeapon(type) {
-    if (this.hasWeapon(type)) {
-      const w = this.getWeapon(type);
-      if (w.level < 3) {
-        w.level++;
-      }
-    } else {
-      this.weapons.push({ type, level: 1 });
-      this.activeWeaponIdx = this.weapons.length - 1;
-    }
-    document.getElementById('weapon-name').textContent = this.weapons[this.activeWeaponIdx].type;
-    document.getElementById('weapon-level').textContent = 'Lv.' + this.weapons[this.activeWeaponIdx].level;
   },
 
   draw(ctx) {

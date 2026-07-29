@@ -67,7 +67,7 @@ const Game = {
     document.getElementById('score').textContent = '0';
     document.getElementById('currency-display').textContent = '0';
     this.updateLivesDisplay();
-    this.updateWeaponHUD();
+    this.updateModuleHUD();
   },
 
   calcPlayArea() {
@@ -109,7 +109,7 @@ const Game = {
     document.getElementById('score').textContent = '0';
     document.getElementById('currency-display').textContent = '0';
     this.updateLivesDisplay();
-    this.updateWeaponHUD();
+    this.updateModuleHUD();
   },
 
   getDifficulty() {
@@ -310,17 +310,19 @@ const Game = {
         Renderer.addFloatingText(obj.x, obj.y - 40, 'SHIELD!', '#64c8ff');
         Audio.shield();
       }
-    } else if (obj.type === 'POWERUP') {
-      const types = Object.keys(WEAPONS).filter(t => {
-        const owned = Player.getWeapon(t);
-        return !owned || owned.level < 3;
+      } else if (obj.type === 'POWERUP') {
+      const types = Object.keys(AUGMENTS).filter(t => {
+        const owned = Player.getAugment(t);
+        return !owned || owned.level < 5;
       });
       if (types.length > 0) {
         const newType = types[Math.floor(Math.random() * types.length)];
-        Player.unlockWeapon(newType);
-        this.updateWeaponHUD();
+        Player.addAugment(newType);
+        this.updateModuleHUD();
+        const aug = Player.getAugment(newType);
+        const label = aug.level > 1 ? newType + ' Lv' + aug.level : newType;
         Renderer.addParticles(obj.x, obj.y, '251, 191, 36', 15);
-        Renderer.addFloatingText(obj.x, obj.y - 10, 'NEW WEAPON!', '#fbbf24');
+        Renderer.addFloatingText(obj.x, obj.y - 10, label, '#fbbf24');
         Audio.powerup();
       }
     } else {
@@ -397,10 +399,10 @@ const Game = {
   },
 
   generateShopCards() {
-    const types = Object.keys(WEAPONS);
+    const types = Object.keys(AUGMENTS);
     const candidates = types.filter(t => {
-      const owned = Player.getWeapon(t);
-      return !owned || owned.level < 3;
+      const owned = Player.getAugment(t);
+      return !owned || owned.level < 5;
     });
 
     for (let i = candidates.length - 1; i > 0; i--) {
@@ -409,9 +411,9 @@ const Game = {
     }
 
     this.shopCards = candidates.slice(0, 3).map(type => {
-      const owned = Player.getWeapon(type);
+      const owned = Player.getAugment(type);
       const level = owned ? owned.level + 1 : 1;
-      const price = 20 + level * 40;
+      const price = 40 + level * 25;
       return { type, level, price };
     });
   },
@@ -449,8 +451,8 @@ const Game = {
     const card = this.shopCards[index];
     if (!card || this.currency < card.price) return;
     this.currency -= card.price;
-    Player.unlockWeapon(card.type);
-    this.updateWeaponHUD();
+    Player.addAugment(card.type);
+    this.updateModuleHUD();
     Audio.shopBuy();
     this.closeShop();
   },
@@ -490,7 +492,7 @@ const Game = {
     document.getElementById('score').textContent = '0';
     document.getElementById('timer').textContent = Math.ceil(this.levelDuration / 1000);
     this.updateLivesDisplay();
-    this.updateWeaponHUD();
+    this.updateModuleHUD();
 
     Spawner.init();
     Player.lastShot = 0;
@@ -506,10 +508,21 @@ const Game = {
     }
   },
 
-  updateWeaponHUD() {
-    const weapon = Player.getActiveWeapon();
-    document.getElementById('weapon-name').textContent = weapon ? weapon.type : 'BASIC';
-    document.getElementById('weapon-level').textContent = weapon ? 'Lv.' + weapon.level : 'Lv.1';
+  updateModuleHUD() {
+    const container = document.getElementById('module-icons');
+    if (!container) return;
+    const types = Object.keys(AUGMENTS);
+    container.innerHTML = types.map(type => {
+      const owned = Player.getAugment(type);
+      const color = AUGMENTS[type].color;
+      if (owned) {
+        return '<span class="module-icon owned" style="border-color:' + color + ';color:' + color + '">' + type[0] + ' Lv' + owned.level + '</span>';
+      } else {
+        return '<span class="module-icon missing">' + type[0] + ' —</span>';
+      }
+    }).join('') +
+    '<span class="module-spacer"></span>' +
+    '<span id="shield-display" class="' + (this.hasShield ? '' : 'hidden ') + '">&#128737;</span>';
   },
 
   gameOver() {
