@@ -2,6 +2,7 @@ const Renderer = {
   particles: [],
   ambientParticles: [],
   floatingTexts: [],
+  shockwaves: [],
   shakeIntensity: 0,
   shakeRemaining: 0,
   redOverlay: 0,
@@ -10,6 +11,7 @@ const Renderer = {
   init(width, height) {
     this.redOverlay = 0;
     this.stars = [];
+    this.shockwaves = [];
     for (let i = 0; i < 60; i++) {
       this.stars.push({
         x: Math.random() * width,
@@ -60,6 +62,10 @@ const Renderer = {
     this.floatingTexts.push({ x, y, text, color, life: 1, vy: -1.8 });
   },
 
+  addShockwave(x, y, radius) {
+    this.shockwaves.push({ x, y, radius, life: 1 });
+  },
+
   shake(intensity, duration) {
     this.shakeIntensity = intensity || 6;
     this.shakeRemaining = duration || 250;
@@ -96,6 +102,14 @@ const Renderer = {
       ft.life -= 0.018;
       if (ft.life <= 0) {
         this.floatingTexts.splice(i, 1);
+      }
+    }
+
+    for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+      const s = this.shockwaves[i];
+      s.life -= 0.035;
+      if (s.life <= 0) {
+        this.shockwaves.splice(i, 1);
       }
     }
 
@@ -184,6 +198,17 @@ const Renderer = {
       ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${p.colorRGB}, ${p.life})`;
       ctx.fill();
+    }
+  },
+
+  drawShockwaves(ctx) {
+    for (const s of this.shockwaves) {
+      const r = Math.max(0.5, s.radius * (1 - s.life));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(250, 204, 21, ${s.life * 0.8})`;
+      ctx.lineWidth = 1 + 3 * s.life;
+      ctx.stroke();
     }
   },
 

@@ -1,3 +1,15 @@
+// Niveaux de départ de chaque augment pour tester (0-5). 0 = non possédé.
+const DEBUG_START_AUGMENTS = {
+  RAPID: 0,
+  SPREAD: 3,
+  PIERCING: 0,
+  HEAVY: 0,
+  ZIGZAG: 0,
+  SPLIT: 5,
+  SHOCK: 5,
+  PELLET: 5
+};
+
 const Player = {
   x: 400,
   y: 550,
@@ -10,7 +22,9 @@ const Player = {
     this.x = canvasWidth / 2;
     this.y = canvasHeight - 50;
     this.trail = [];
-    this.augments = [];
+    this.augments = Object.keys(DEBUG_START_AUGMENTS)
+      .filter(type => DEBUG_START_AUGMENTS[type] > 0)
+      .map(type => ({ type, level: DEBUG_START_AUGMENTS[type] }));
     this.lastShot = 0;
   },
 

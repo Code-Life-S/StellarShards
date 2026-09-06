@@ -56,12 +56,28 @@ const Music = {
         this.gain.gain.cancelScheduledValues(this.ctx.currentTime);
         this.gain.gain.setValueAtTime(this.gain.gain.value || 0.20, this.ctx.currentTime);
         this.gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+        this.gain.disconnect();
       } catch (_) {}
+      this.gain = null;
     }
   },
 
   setTempo(bpm) {
     this.tempo = Math.max(85, Math.min(105, bpm));
+  },
+
+  pause() {
+    if (this.timerID) {
+      clearTimeout(this.timerID);
+      this.timerID = null;
+    }
+  },
+
+  resume() {
+    if (this.enabled && this.ctx) {
+      this.scheduledTime = this.ctx.currentTime + 0.05;
+      this.scheduleLoop();
+    }
   },
 
   scheduleLoop() {

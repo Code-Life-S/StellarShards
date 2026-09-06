@@ -473,3 +473,60 @@ html, body {
     padding: 14px 18px;
   }
 }
+
+#pause-menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  pointer-events: auto;
+}
+
+#pause-menu.hidden {
+  display: none;
+}
+
+#pause-menu h1 {
+  font-size: 48px;
+  color: #fbbf24;
+  margin-bottom: 32px;
+  text-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+}
+
+#pause-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 220px;
+}
+
+#pause-resume, #pause-quit {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ccc;
+  padding: 12px 28px;
+  border-radius: 6px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+#pause-resume:hover, #pause-quit:hover {
+  background: rgba(100, 200, 255, 0.2);
+  border-color: #64c8ff;
+  color: #64c8ff;
+}
+
+#pause-resume:focus, #pause-quit:focus {
+  outline: none;
+  border-color: #64c8ff;
+  box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.3);
+}

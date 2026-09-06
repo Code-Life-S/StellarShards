@@ -1,3 +1,5 @@
+const DEBUG_START_LEVEL = 5; // Niveau de départ pour tester (1+)
+
 const CONFIG = {
   areaRatio: 0.30,
   areaTopRatio: 0.15,
@@ -51,7 +53,7 @@ const Game = {
     this.hasShield = false;
     this.shieldAppearTimer = 0;
     this.titleTimer = 0;
-    this.currentLevel = 1;
+    this.currentLevel = DEBUG_START_LEVEL;
     this.rerollsLeft = 2;
     this.shopSelectedIndex = 0;
 
@@ -89,13 +91,14 @@ const Game = {
     this.hasShield = false;
     this.shieldAppearTimer = 0;
     this.titleTimer = 0;
-    this.currentLevel = 1;
+    this.currentLevel = DEBUG_START_LEVEL;
     this.rerollsLeft = 2;
     this.shopSelectedIndex = 0;
 
     Player.init(this.canvas.width, this.canvas.height);
     Spawner.init();
     Renderer.init(this.canvas.width, this.canvas.height);
+    Music.stop();
     Music.start(Audio.ctx);
 
     this.levelDuration = this.getLevelDuration();
@@ -146,7 +149,12 @@ const Game = {
       if (this.phase === 'title') {
         this.renderTitleDemo();
       }
-      Renderer.update(dt, this.canvas.width, this.canvas.height);
+      if (this.phase === 'paused') {
+        // Still render the game scene but frozen
+        Renderer.update(dt, this.canvas.width, this.canvas.height);
+      } else {
+        Renderer.update(dt, this.canvas.width, this.canvas.height);
+      }
       return;
     }
 
@@ -172,7 +180,7 @@ const Game = {
       this.missiles.push(...newMissiles);
     }
 
-    this.updateMissiles();
+    this.updateMissiles(dt);
     this.checkMissileCollisions();
     this.checkObjectCollisions();
 
@@ -183,12 +191,48 @@ const Game = {
     Renderer.update(dt, this.canvas.width, this.canvas.height);
   },
 
-  updateMissiles() {
+  updateMissiles(dt) {
     for (let i = this.missiles.length - 1; i >= 0; i--) {
-      this.missiles[i].update();
-      if (!this.missiles[i].active) {
+      const m = this.missiles[i];
+      m.update(dt);
+      if (m.readyToSplit) {
+        m.readyToSplit = false;
+        this.splitMissile(m);
+      }
+      if (m.readyToShock) {
+        m.readyToShock = false;
+        this.shockwaveAt(m.x, m.y, m.shockRadius, m.shockDamage);
+      }
+      if (m.readyToPellet) {
+        m.readyToPellet = false;
+        this.scatterPellets(m.x, m.y, m.pelletCount, m.pelletDamage, m.pelletSpeed, m.pelletRange);
+      }
+      if (!m.active) {
         this.missiles.splice(i, 1);
       }
+    }
+  },
+
+  splitMissile(m) {
+    const baseAngle = Math.atan2(m.vx, -m.vy);
+    const step = m.splitSpread * Math.PI / 180;
+    const startAngle = -(m.splitCount - 1) * step / 2;
+    const childCfg = {
+      damage: m.damage,
+      pierce: m.pierce,
+      explosionRadius: m.explosionRadius,
+      zigzagAmp: m.zigzagAmp,
+      size: Math.max(2, m.size - 1),
+      color: m.color,
+      splitCount: 0,
+      shockRadius: 0,
+      pelletCount: 0
+    };
+    for (let i = 0; i < m.splitCount; i++) {
+      const angle = baseAngle + startAngle + i * step;
+      const vx = Math.sin(angle) * m.speed;
+      const vy = -Math.cos(angle) * m.speed;
+      this.missiles.push(new Missile(m.x, m.y, vx, vy, childCfg));
     }
   },
 
@@ -247,6 +291,38 @@ const Game = {
           this.objects.splice(oi, 1);
         }
       }
+    }
+  },
+
+  shockwaveAt(x, y, radius, damage) {
+    Renderer.addShockwave(x, y, radius);
+    Renderer.shake(3, 120);
+    Audio.explosion();
+    for (let oi = this.objects.length - 1; oi >= 0; oi--) {
+      const obj = this.objects[oi];
+      if (!obj.active || !obj.destroyable) continue;
+      const dx = x - obj.x;
+      const dy = y - obj.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < radius) {
+        const destroyed = obj.hit(damage);
+        if (destroyed) {
+          this.onObjectDestroyed(obj);
+          this.objects.splice(oi, 1);
+        }
+      }
+    }
+  },
+
+  scatterPellets(x, y, count, damage, speed, range) {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.6;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      const cfg = { ...MISSILE_BASE, damage, size: 3, color: AUGMENTS.PELLET.color };
+      const pellet = new Missile(x, y, vx, vy, cfg);
+      pellet.maxRange = range;
+      this.missiles.push(pellet);
     }
   },
 
@@ -538,6 +614,29 @@ const Game = {
     this.startGame();
   },
 
+  pauseGame() {
+    if (this.phase !== 'playing') return;
+    this.phase = 'paused';
+    document.getElementById('pause-menu').classList.remove('hidden');
+    Music.pause();
+  },
+
+  resumeGame() {
+    if (this.phase !== 'paused') return;
+    this.phase = 'playing';
+    document.getElementById('pause-menu').classList.add('hidden');
+    Music.resume();
+  },
+
+  quitToTitle() {
+    this.phase = 'title';
+    Music.stop();
+    document.getElementById('pause-menu').classList.add('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('title-screen').classList.remove('hidden');
+    this.init();
+  },
+
   renderTitleDemo() {
     if (this.objects.length < 8 && Math.random() < 0.03) {
       const types = ['STAR', 'DIAMOND', 'SKULL'];
@@ -578,6 +677,7 @@ const Game = {
     }
 
     Renderer.drawParticles(ctx);
+    Renderer.drawShockwaves(ctx);
     Renderer.drawFloatingTexts(ctx);
 
     ctx.restore();

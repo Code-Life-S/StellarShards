@@ -15,6 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (Game.phase === 'playing') {
+        Game.pauseGame();
+      } else if (Game.phase === 'paused') {
+        Game.resumeGame();
+      }
+      return;
+    }
     if (e.key === ' ') {
       e.preventDefault();
       if (Game.phase === 'playing') return;
@@ -35,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Game.shopNavigate(1);
       } else if (e.key === 'r' || e.key === 'R') {
         Game.rerollShop();
-      } else if (e.key === 's' || e.key === 'S' || e.key === 'Escape') {
+      } else if (e.key === 's' || e.key === 'S') {
         Game.closeShop();
       }
     }
@@ -78,6 +87,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('shop-skip').addEventListener('click', () => {
     if (Game.phase === 'shop') {
       Game.closeShop();
+    }
+  });
+
+  document.getElementById('pause-resume').addEventListener('click', () => {
+    if (Game.phase === 'paused') {
+      Game.resumeGame();
+    }
+  });
+
+  document.getElementById('pause-quit').addEventListener('click', () => {
+    if (Game.phase === 'paused') {
+      Game.quitToTitle();
     }
   });
 
