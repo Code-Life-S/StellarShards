@@ -24,6 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
+    if (Game.phase === 'paused') {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'z' || e.key === 'Z' || e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        const dir = (e.key === 'ArrowUp' || e.key === 'z' || e.key === 'Z') ? -1 : 1;
+        Game.pauseNavigate(dir);
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        Game.pauseSelect();
+      }
+      return;
+    }
     if (e.key === ' ') {
       e.preventDefault();
       if (Game.phase === 'playing') return;

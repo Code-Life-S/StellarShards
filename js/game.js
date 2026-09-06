@@ -617,7 +617,9 @@ const Game = {
   pauseGame() {
     if (this.phase !== 'playing') return;
     this.phase = 'paused';
+    this.pauseSelectedIndex = 0;
     document.getElementById('pause-menu').classList.remove('hidden');
+    this.updatePauseMenuUI();
     Music.pause();
   },
 
@@ -626,6 +628,28 @@ const Game = {
     this.phase = 'playing';
     document.getElementById('pause-menu').classList.add('hidden');
     Music.resume();
+  },
+
+  pauseNavigate(dir) {
+    if (this.phase !== 'paused') return;
+    this.pauseSelectedIndex = (this.pauseSelectedIndex + dir + 2) % 2;
+    this.updatePauseMenuUI();
+  },
+
+  pauseSelect() {
+    if (this.phase !== 'paused') return;
+    if (this.pauseSelectedIndex === 0) {
+      this.resumeGame();
+    } else {
+      this.quitToTitle();
+    }
+  },
+
+  updatePauseMenuUI() {
+    const buttons = document.querySelectorAll('#pause-buttons button');
+    buttons.forEach((btn, i) => {
+      btn.classList.toggle('selected', i === this.pauseSelectedIndex);
+    });
   },
 
   quitToTitle() {

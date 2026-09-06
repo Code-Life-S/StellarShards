@@ -530,3 +530,10 @@ html, body {
   border-color: #64c8ff;
   box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.3);
 }
+
+#pause-resume.selected, #pause-quit.selected {
+  background: rgba(100, 200, 255, 0.25);
+  border-color: #64c8ff;
+  color: #64c8ff;
+  box-shadow: 0 0 15px rgba(100, 200, 255, 0.4), inset 0 0 15px rgba(100, 200, 255, 0.1);
+}
