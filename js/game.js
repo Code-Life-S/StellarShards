@@ -11,7 +11,11 @@ const CONFIG = {
   playerSpeed: 12,
   baseLevelDuration: 45000,
   levelDurationIncrement: 15000,
-  maxLevelDuration: 120000
+  maxLevelDuration: 120000,
+  // Progression : un niveau boss tous les `bossEvery` niveaux (5, 10, 15...),
+  // les boss s'y succedent dans l'ordre de `bossRotation`.
+  bossEvery: 5,
+  bossRotation: ['NOYAU', 'COMETE', 'ARCHITECTE']
 };
 
 const Game = {
@@ -115,9 +119,6 @@ const Game = {
     Music.stop();
     Music.start(Audio.ctx);
 
-    this.levelDuration = this.getLevelDuration();
-    this.levelTimer = this.levelDuration;
-
     document.getElementById('title-screen').classList.add('hidden');
     document.getElementById('game-over').classList.add('hidden');
     document.getElementById('level-complete').classList.add('hidden');
@@ -127,7 +128,7 @@ const Game = {
     document.getElementById('currency-display').textContent = '0';
     this.updateLivesDisplay();
     this.updateModuleHUD();
-    this.updateBossHUD();
+    this.beginLevelTimer();
   },
 
   getDifficulty() {
@@ -149,6 +150,36 @@ const Game = {
   getLevelDuration() {
     const dur = CONFIG.baseLevelDuration + (this.currentLevel - 1) * CONFIG.levelDurationIncrement;
     return Math.min(dur, CONFIG.maxLevelDuration);
+  },
+
+  // --- progression : niveau classique ou niveau boss -----------------------
+
+  isBossLevel(level) {
+    return level > 0 && level % CONFIG.bossEvery === 0;
+  },
+
+  getBossKind(level) {
+    const index = Math.floor(level / CONFIG.bossEvery) - 1;
+    return CONFIG.bossRotation[index % CONFIG.bossRotation.length];
+  },
+
+  // Point d'entree unique du demarrage d'un niveau (appe par startGame()
+  // et startNextLevel()) : soit un minuteur, soit un boss.
+  beginLevelTimer() {
+    if (this.isBossLevel(this.currentLevel)) {
+      this.setupBossLevel(this.currentLevel, this.getBossKind(this.currentLevel));
+      Renderer.shake(10, 500);
+      Audio.bomb();
+      Renderer.addFloatingText(
+        this.canvas.width / 2, this.canvas.height * 0.45,
+        'BOSS : ' + this.boss.name, this.boss.colorHex
+      );
+      return;
+    }
+    this.levelDuration = this.getLevelDuration();
+    this.levelTimer = this.levelDuration;
+    document.getElementById('timer').textContent = Math.ceil(this.levelDuration / 1000);
+    this.updateBossHUD();
   },
 
   resize() {
@@ -729,19 +760,17 @@ const Game = {
     this.hasShield = false;
     this.shieldAppearTimer = 0;
     this.phase = 'playing';
-    this.levelDuration = this.getLevelDuration();
-    this.levelTimer = this.levelDuration;
     this.shopSelectedIndex = 0;
 
     document.getElementById('shield-display').classList.add('hidden');
     document.getElementById('score').textContent = '0';
-    document.getElementById('timer').textContent = Math.ceil(this.levelDuration / 1000);
     this.updateLivesDisplay();
     this.updateModuleHUD();
-    this.updateBossHUD();
 
     Spawner.init();
     Player.lastShot = 0;
+
+    this.beginLevelTimer();
 
     const tempo = Math.min(100 + (this.currentLevel - 1) * 5, 130);
     Music.setTempo(tempo);
