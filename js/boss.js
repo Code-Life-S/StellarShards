@@ -1,29 +1,46 @@
-// BOSS "LE NOYAU" : ennemi de fin d'arene qui siege en haut de l'ecran.
-// 3 phases selon ses PV restants, deux patterns de tir :
-//   - radial  : anneau de projectiles tout autour du boss
-//   - vise    : salve orientee vers la position du joueur
-// Chaque attaque est precedee d'un telegraph (le noyau pulse en jaune).
+// BOSS — socle commun + BOSS "LE NOYAU".
+//
+// Interface consommee par Game (tous les boss doivent la respecter) :
+//   champs     : name, hp, maxHp, active, x, y, radius,
+//                contactDamage, ramCooldown, points, colorRGB, colorHex
+//   methodes   : update(dt, player, spawnBullets) / draw(ctx)
+//                getTargets()  -> [{x, y, radius, points, colorRGB, colorHex, hit(d)}]
+//                onResize(canvasWidth, canvasHeight, playLeft, playRight)
+//
+// Chaque fichier de boss s'enregistre dans BOSS_FACTORIES.
+// Ordre des scripts obligatoire : boss.js avant boss-*.js.
 
-const BOSS_PHASES = {
-  1: { interval: 1600, telegraph: 380, radialCount: 10, radialSpeed: 2.6, aimedCount: 3, aimedSpread: 14, aimedSpeed: 4.0, moveSpeed: 0.0009 },
-  2: { interval: 1100, telegraph: 320, radialCount: 14, radialSpeed: 3.0, aimedCount: 5, aimedSpread: 12, aimedSpeed: 4.6, moveSpeed: 0.0013 },
-  3: { interval: 800,  telegraph: 260, radialCount: 18, radialSpeed: 3.4, aimedCount: 7, aimedSpread: 10, aimedSpeed: 5.2, moveSpeed: 0.0018 }
-};
+const BOSS_FACTORIES = {};
+
+function createBoss(kind, canvasWidth, canvasHeight, playLeft, playRight, level) {
+  const factory = BOSS_FACTORIES[kind] || BOSS_FACTORIES.NOYAU;
+  return factory(canvasWidth, canvasHeight, playLeft, playRight, level);
+}
 
 class EnemyBullet {
-  constructor(x, y, vx, vy, radius) {
+  constructor(x, y, vx, vy, radius, life, color) {
     this.x = x;
     this.y = y;
     this.vx = vx;
     this.vy = vy;
     this.radius = radius || 6;
-    this.color = '#ff5566';
+    this.color = color || '#ff5566';
+    this.life = life || 0; // 0 = duree illimitee
     this.active = true;
   }
 
-  update(canvasWidth, canvasHeight) {
+  update(canvasWidth, canvasHeight, dt) {
     this.x += this.vx;
     this.y += this.vy;
+
+    if (this.life > 0) {
+      this.life -= dt;
+      if (this.life <= 0) {
+        this.active = false;
+        return;
+      }
+    }
+
     if (this.x < -40 || this.x > canvasWidth + 40 || this.y < -40 || this.y > canvasHeight + 40) {
       this.active = false;
     }
@@ -32,7 +49,7 @@ class EnemyBullet {
   draw(ctx) {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius * 2, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 85, 102, 0.15)';
+    ctx.fillStyle = this.color + '26';
     ctx.fill();
 
     ctx.beginPath();
@@ -45,44 +62,112 @@ class EnemyBullet {
   }
 }
 
-class Boss {
+// Commune a tous les boss.
+class BossBase {
   constructor(canvasWidth, canvasHeight, playLeft, playRight, level) {
     this.level = level || 1;
+    this.name = 'BOSS';
     this.maxHp = 100 + (this.level - 1) * 30;
     this.hp = this.maxHp;
     this.radius = 46;
+    this.canvasWidth = canvasWidth;
+    this.canvasHeight = canvasHeight;
     this.playLeft = playLeft;
     this.playRight = playRight;
-    this.amplitude = (playRight - playLeft) * 0.3;
     this.x = (playLeft + playRight) / 2;
     this.y = canvasHeight * 0.18;
     this.time = 0;
     this.active = true;
     this.hitFlash = 0;
+    this.invulnerable = false;   // ignore totalement les degats
+    this.damageMult = 1;         // multiplicateur de degats recus
+    this.contactDamage = 0;      // >0 : le boss blesse au contact
+    this.ramCooldown = 0;
+    // Le boss est sa propre cible (voir getTargets()).
+    this.points = 2;             // score accorde par impact
+    this.colorRGB = '216, 180, 254';
+    this.colorHex = '#c4b5fd';
+    this._targets = [this];
+  }
+
+  get hpRatio() {
+    return Math.max(0, this.hp / this.maxHp);
+  }
+
+  getPhase() {
+    const ratio = this.hpRatio;
+    if (ratio > 0.66) return 1;
+    if (ratio > 0.33) return 2;
+    return 3;
+  }
+
+  hit(damage) {
+    if (this.invulnerable) return false;
+    this.hp -= damage * this.damageMult;
+    this.hitFlash = 160;
+    if (this.hp <= 0) {
+      this.hp = 0;
+      this.active = false;
+      return true;
+    }
+    return false;
+  }
+
+  getTargets() {
+    return this._targets;
+  }
+
+  tick(dt) {
+    if (this.hitFlash > 0) {
+      this.hitFlash -= dt;
+      if (this.hitFlash < 0) this.hitFlash = 0;
+    }
+  }
+
+  onResize(canvasWidth, canvasHeight, playLeft, playRight) {
+    this.canvasWidth = canvasWidth;
+    this.canvasHeight = canvasHeight;
+    this.playLeft = playLeft;
+    this.playRight = playRight;
+    this.x = Math.max(playLeft + this.radius, Math.min(playRight - this.radius, this.x));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// LE NOYAU — turret statique, bullet-hell (radial + vise).
+// ---------------------------------------------------------------------------
+const NOYAU_PHASES = {
+  1: { interval: 1600, telegraph: 380, radialCount: 10, radialSpeed: 2.6, aimedCount: 3, aimedSpread: 14, aimedSpeed: 4.0, moveSpeed: 0.0009 },
+  2: { interval: 1100, telegraph: 320, radialCount: 14, radialSpeed: 3.0, aimedCount: 5, aimedSpread: 12, aimedSpeed: 4.6, moveSpeed: 0.0013 },
+  3: { interval: 800,  telegraph: 260, radialCount: 18, radialSpeed: 3.4, aimedCount: 7, aimedSpread: 10, aimedSpeed: 5.2, moveSpeed: 0.0018 }
+};
+
+class BossNoyau extends BossBase {
+  constructor(canvasWidth, canvasHeight, playLeft, playRight, level) {
+    super(canvasWidth, canvasHeight, playLeft, playRight, level);
+    this.name = 'LE NOYAU';
+    this.radius = 46;
+    this.amplitude = (playRight - playLeft) * 0.3;
+    this.y = canvasHeight * 0.18;
     this.attackTimer = 1200;
     this.telegraph = 0;
     this.pendingAttack = null;
     this.attackToggle = 0;
   }
 
-  getPhase() {
-    const ratio = this.hp / this.maxHp;
-    if (ratio > 0.66) return 1;
-    if (ratio > 0.33) return 2;
-    return 3;
+  onResize(canvasWidth, canvasHeight, playLeft, playRight) {
+    super.onResize(canvasWidth, canvasHeight, playLeft, playRight);
+    this.amplitude = (playRight - playLeft) * 0.3;
+    this.y = canvasHeight * 0.18;
   }
 
   update(dt, player, spawnBullets) {
-    const phase = BOSS_PHASES[this.getPhase()];
+    const phase = NOYAU_PHASES[this.getPhase()];
     this.time += dt;
+    this.tick(dt);
 
     const center = (this.playLeft + this.playRight) / 2;
     this.x = center + Math.sin(this.time * phase.moveSpeed) * this.amplitude;
-
-    if (this.hitFlash > 0) {
-      this.hitFlash -= dt;
-      if (this.hitFlash < 0) this.hitFlash = 0;
-    }
 
     if (this.pendingAttack === null) {
       this.attackTimer -= dt;
@@ -101,7 +186,7 @@ class Boss {
   }
 
   fire(kind, player, spawnBullets) {
-    const phase = BOSS_PHASES[this.getPhase()];
+    const phase = NOYAU_PHASES[this.getPhase()];
     if (kind === 'radial') {
       for (let i = 0; i < phase.radialCount; i++) {
         const a = (i / phase.radialCount) * Math.PI * 2 + this.time * 0.001;
@@ -126,40 +211,33 @@ class Boss {
     }
   }
 
-  hit(damage) {
-    this.hp -= damage;
-    this.hitFlash = 120;
-    if (this.hp <= 0) {
-      this.hp = 0;
-      this.active = false;
-      return true;
-    }
-    return false;
-  }
-
   draw(ctx) {
     const t = Date.now() * 0.001;
-    const charging = this.pendingAttack !== null;
+    const hpRatio = this.hpRatio;
+    const damaged = this.hitFlash > 0;
 
-    const aura = ctx.createRadialGradient(this.x, this.y, this.radius * 0.4, this.x, this.y, this.radius * 2.6);
-    aura.addColorStop(0, 'rgba(168, 85, 247, 0.35)');
-    aura.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    // Aura : reduit avec les PV, vire au rouge quand le boss prend des degats.
+    const auraR = this.radius * (2.2 + 0.4 * hpRatio);
+    const aura = ctx.createRadialGradient(this.x, this.y, this.radius * 0.4, this.x, this.y, auraR);
+    aura.addColorStop(0, damaged ? 'rgba(255, 120, 120, 0.45)' : 'rgba(168, 85, 247, 0.35)');
+    aura.addColorStop(1, damaged ? 'rgba(255, 120, 120, 0)' : 'rgba(168, 85, 247, 0)');
     ctx.fillStyle = aura;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius * 2.6, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, auraR, 0, Math.PI * 2);
     ctx.fill();
 
-    // Anneau externe rotatif (jaune pendant le telegraph).
+    // Anneau externe rotatif : rayon proportionnel aux PV restants.
+    const ringR = this.radius * (1.1 + 0.4 * hpRatio);
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(t * 0.6);
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const a0 = i * Math.PI / 3;
-      ctx.arc(0, 0, this.radius * 1.5, a0, a0 + Math.PI / 3 * 0.6);
+      ctx.arc(0, 0, ringR, a0, a0 + Math.PI / 3 * 0.6);
     }
-    ctx.strokeStyle = charging
-      ? 'rgba(255, 220, 120, ' + (0.5 + 0.4 * Math.sin(t * 12)) + ')'
+    ctx.strokeStyle = damaged
+      ? 'rgba(255, 90, 90, ' + (0.6 + 0.4 * Math.sin(t * 25)) + ')'
       : 'rgba(216, 180, 254, 0.5)';
     ctx.lineWidth = 4;
     ctx.stroke();
@@ -169,8 +247,8 @@ class Boss {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(this.x - 12, this.y - 12, 4, this.x, this.y, this.radius);
-    grad.addColorStop(0, this.hitFlash > 0 ? '#ffffff' : '#a855f7');
-    grad.addColorStop(1, this.hitFlash > 0 ? '#ffdddd' : '#4c1d95');
+    grad.addColorStop(0, damaged ? '#ffffff' : '#a855f7');
+    grad.addColorStop(1, damaged ? '#ffdddd' : '#4c1d95');
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.strokeStyle = '#c4b5fd';
@@ -180,39 +258,12 @@ class Boss {
     // Noyau / oeil.
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius * 0.4, 0, Math.PI * 2);
-    ctx.fillStyle = charging ? '#fde047' : '#f472b6';
+    ctx.fillStyle = damaged ? '#ffffff' : '#f472b6';
     ctx.shadowColor = ctx.fillStyle;
     ctx.shadowBlur = 18;
     ctx.fill();
     ctx.shadowBlur = 0;
   }
-
-  drawHPBar(ctx, width) {
-    const barW = Math.min(520, width * 0.6);
-    const barH = 16;
-    const x = (width - barW) / 2;
-    const y = 64;
-    const ratio = Math.max(0, this.hp / this.maxHp);
-
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.fillRect(x - 3, y - 3, barW + 6, barH + 6);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-    ctx.fillRect(x, y, barW, barH);
-
-    const grad = ctx.createLinearGradient(x, 0, x + barW, 0);
-    grad.addColorStop(0, '#f472b6');
-    grad.addColorStop(1, '#a855f7');
-    ctx.fillStyle = grad;
-    ctx.fillRect(x, y, barW * ratio, barH);
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, barW, barH);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 13px "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('LE NOYAU', width / 2, y - 6);
-  }
 }
+
+BOSS_FACTORIES.NOYAU = (w, h, l, r, level) => new BossNoyau(w, h, l, r, level);

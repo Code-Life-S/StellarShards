@@ -13,7 +13,7 @@
     <div id="hud" class="hidden">
       <div id="hud-left">
         <div id="score-display">Score: <span id="score">0</span></div>
-        <div id="timer-display">&#9201; <span id="timer">0</span>s</div>
+        <div id="timer-display">&#9201; <span id="timer">0</span></div>
       </div>
       <div id="hud-center">
         <div id="module-icons"></div>
@@ -22,6 +22,11 @@
         <span id="currency-display">&#9889; <span id="currency">0</span></span>
         <span id="lives-display">&#10084;&#65039;&#10084;&#65039;&#10084;&#65039;</span>
       </div>
+    </div>
+
+    <div id="boss-hud" class="hidden">
+      <div id="boss-name">LE NOYAU</div>
+      <div id="boss-hp-track"><div id="boss-hp-fill"></div></div>
     </div>
 
     <div id="title-screen">
@@ -65,9 +70,10 @@
     <div id="pause-menu" class="hidden">
       <h1>PAUSE</h1>
       <div id="pause-buttons">
-        <button id="pause-resume">RESUME</button>
-        <button id="pause-boss">TEST BOSS</button>
-        <button id="pause-quit">QUIT TO MENU</button>
+        <button id="pause-resume" data-action="resume">RESUME</button>
+        <button id="pause-boss-noyau" data-action="boss" data-kind="NOYAU">TEST LE NOYAU</button>
+        <button id="pause-boss-comete" data-action="boss" data-kind="COMETE">TEST LA COMÈTE</button>
+        <button id="pause-quit" data-action="quit">QUIT TO MENU</button>
       </div>
     </div>
   </div>
@@ -79,6 +85,7 @@
   <script src="js/falling-object.js"></script>
   <script src="js/spawner.js"></script>
   <script src="js/boss.js"></script>
+  <script src="js/boss-comet.js"></script>
   <script src="js/renderer.js"></script>
   <script src="js/music.js"></script>
   <script src="js/game.js"></script>

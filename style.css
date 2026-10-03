@@ -67,6 +67,10 @@ html, body {
   text-shadow: 0 0 6px rgba(0,0,0,0.8);
 }
 
+/* L'unite "s" : masquee quand le compteur affiche le nom d'un boss. */
+#timer-display::after { content: "s"; }
+#timer-display.boss::after { content: ""; }
+
 #timer {
   color: #fbbf24;
   font-weight: 600;
@@ -155,6 +159,46 @@ html, body {
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.2); }
+}
+
+#boss-hud {
+  position: absolute;
+  top: 72px;                 /* sous la zone #hud (top:16 + ~40-56px) */
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;      /* les clics traversent vers le canvas */
+}
+
+#boss-hud.hidden {
+  display: none;
+}
+
+#boss-name {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #f0abfc;
+  text-shadow: 0 0 12px rgba(168, 85, 247, 0.8);
+}
+
+#boss-hp-track {
+  width: min(520px, 60%);
+  height: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#boss-hp-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #f472b6, #a855f7);
+  transition: width 0.12s linear;
 }
 
 #game-over {
@@ -507,7 +551,7 @@ html, body {
   min-width: 220px;
 }
 
-#pause-resume, #pause-boss, #pause-quit {
+#pause-buttons button {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ccc;
@@ -519,19 +563,19 @@ html, body {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-#pause-resume:hover, #pause-boss:hover, #pause-quit:hover {
+#pause-buttons button:hover {
   background: rgba(100, 200, 255, 0.2);
   border-color: #64c8ff;
   color: #64c8ff;
 }
 
-#pause-resume:focus, #pause-boss:focus, #pause-quit:focus {
+#pause-buttons button:focus {
   outline: none;
   border-color: #64c8ff;
   box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.3);
 }
 
-#pause-resume.selected, #pause-boss.selected, #pause-quit.selected {
+#pause-buttons button.selected {
   background: rgba(100, 200, 255, 0.25);
   border-color: #64c8ff;
   color: #64c8ff;

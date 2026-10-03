@@ -101,22 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.getElementById('pause-resume').addEventListener('click', () => {
-    if (Game.phase === 'paused') {
-      Game.resumeGame();
-    }
-  });
-
-  document.getElementById('pause-boss').addEventListener('click', () => {
-    if (Game.phase === 'paused') {
-      Game.startBossTest();
-    }
-  });
-
-  document.getElementById('pause-quit').addEventListener('click', () => {
-    if (Game.phase === 'paused') {
-      Game.quitToTitle();
-    }
+  // Menu pause : un seul ecouteur delogue (meme logique que le clavier via pauseSelect()).
+  document.getElementById('pause-buttons').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn || Game.phase !== 'paused') return;
+    const buttons = document.querySelectorAll('#pause-buttons button');
+    Game.pauseSelectedIndex = Array.prototype.indexOf.call(buttons, btn);
+    Game.pauseSelect();
   });
 
   function gameLoop(timestamp) {

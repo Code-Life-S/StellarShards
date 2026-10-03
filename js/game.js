@@ -74,6 +74,7 @@ const Game = {
     document.getElementById('currency-display').textContent = '0';
     this.updateLivesDisplay();
     this.updateModuleHUD();
+    this.updateBossHUD();
   },
 
   calcPlayArea() {
@@ -119,6 +120,7 @@ const Game = {
     document.getElementById('currency-display').textContent = '0';
     this.updateLivesDisplay();
     this.updateModuleHUD();
+    this.updateBossHUD();
   },
 
   getDifficulty() {
@@ -149,11 +151,9 @@ const Game = {
     Player.y = this.canvas.height - 50;
     Player.trail = [];
     if (this.boss) {
-      this.boss.playLeft = this.playLeft;
-      this.boss.playRight = this.playRight;
-      this.boss.amplitude = (this.playRight - this.playLeft) * 0.3;
-      this.boss.y = this.canvas.height * 0.18;
+      this.boss.onResize(this.canvas.width, this.canvas.height, this.playLeft, this.playRight);
     }
+    this.updateBossHudPosition();
   },
 
   update(dt, timestamp) {
@@ -291,7 +291,7 @@ const Game = {
 
     for (let i = this.enemyBullets.length - 1; i >= 0; i--) {
       const b = this.enemyBullets[i];
-      b.update(this.canvas.width, this.canvas.height);
+      b.update(this.canvas.width, this.canvas.height, dt);
       if (!b.active) {
         this.enemyBullets.splice(i, 1);
         continue;
@@ -300,51 +300,100 @@ const Game = {
       const dy = Player.y - b.y;
       if (Math.sqrt(dx * dx + dy * dy) < Player.radius + b.radius) {
         this.enemyBullets.splice(i, 1);
-        this.handleEnemyBulletHit(b);
+        this.hitPlayer(b.x, b.y, hexToRgb(b.color));
+      }
+    }
+
+    // Contact direct avec le boss (si le boss est "contactDamage").
+    if (boss.contactDamage > 0) {
+      if (boss.ramCooldown > 0) {
+        boss.ramCooldown -= dt;
+      } else {
+        const dx = Player.x - boss.x;
+        const dy = Player.y - boss.y;
+        if (Math.sqrt(dx * dx + dy * dy) < Player.radius + boss.radius * 0.9) {
+          boss.ramCooldown = 1200;
+          this.hitPlayer(boss.x, boss.y, hexToRgb('#ffb454'));
+        }
       }
     }
 
     this.checkBossMissileCollisions();
+    this.updateBossHUD();
 
     if (!boss.active) {
       this.onBossDefeated();
     }
   },
 
+  updateBossHUD() {
+    const hud = document.getElementById('boss-hud');
+    // Unite "s" du timer masquee pendant un combat de boss.
+    document.getElementById('timer-display').classList.toggle('boss', !!this.boss);
+    // Masque le HUD en dehors d'une partie jouee (titre, pause, game over...).
+    if (!this.boss || this.phase !== 'playing') {
+      hud.classList.add('hidden');
+      return;
+    }
+    hud.classList.remove('hidden');
+    document.getElementById('boss-name').textContent = this.boss.name;
+    const ratio = Math.max(0, this.boss.hp / this.boss.maxHp);
+    document.getElementById('boss-hp-fill').style.width = (ratio * 100) + '%';
+  },
+
+  // Evite tout chevauchement avec #hud : on place #boss-hud juste sous le HUD principal.
+  updateBossHudPosition() {
+    const hud = document.getElementById('hud');
+    const bossHud = document.getElementById('boss-hud');
+    if (!hud || !bossHud) return;
+    const bottom = hud.getBoundingClientRect().bottom;
+    // #hud peut etre masquee (ecrans hors partie) : on retombe sur la valeur par defaut du CSS.
+    bossHud.style.top = bottom > 0 ? (bottom + 12) + 'px' : '';
+  },
+
   checkBossMissileCollisions() {
     const boss = this.boss;
     if (!boss || !boss.active) return;
+    const targets = boss.getTargets();
 
     for (let mi = this.missiles.length - 1; mi >= 0; mi--) {
       const m = this.missiles[mi];
       if (!m.active) continue;
 
-      const dx = m.x - boss.x;
-      const dy = m.y - boss.y;
-      if (Math.sqrt(dx * dx + dy * dy) < m.size + boss.radius) {
-        boss.hit(m.damage);
-        this.score += m.damage * 2;
-        document.getElementById('score').textContent = this.score;
-        Renderer.addParticles(m.x, m.y, '216, 180, 254', 3);
-        Renderer.addFloatingText(m.x, m.y - 8, '+' + (m.damage * 2), '#c4b5fd');
-        if (m.shouldExplode()) {
-          this.explosionAt(m.x, m.y, m.explosionRadius);
+      for (let ti = targets.length - 1; ti >= 0; ti--) {
+        const t = targets[ti];
+        const dx = m.x - t.x;
+        const dy = m.y - t.y;
+        if (Math.sqrt(dx * dx + dy * dy) < m.size + t.radius) {
+          const destroyed = t.hit(m.damage);
+          const points = t.points || 2;
+          this.score += points;
+          document.getElementById('score').textContent = this.score;
+          Renderer.addParticles(m.x, m.y, t.colorRGB || '216, 180, 254', destroyed ? 10 : 3);
+          Renderer.addFloatingText(m.x, m.y - 8, '+' + points, t.colorHex || '#c4b5fd');
+          if (m.shouldExplode()) {
+            this.explosionAt(m.x, m.y, m.explosionRadius);
+          }
+          m.onHit();
+          if (boss.onTargetDestroyed && destroyed) {
+            boss.onTargetDestroyed(t);
+          }
+          if (!m.active) break;
         }
-        m.onHit();
       }
     }
   },
 
-  handleEnemyBulletHit(bullet) {
+  hitPlayer(x, y, colorRGB) {
     this.consecutiveStars = 0;
     if (this.hasShield) {
       this.breakShield();
-      Renderer.addParticles(bullet.x, bullet.y, '100, 200, 255', 12);
-      Renderer.addFloatingText(bullet.x, bullet.y - 10, 'BLOCKED', '#64c8ff');
+      Renderer.addParticles(x, y, '100, 200, 255', 12);
+      Renderer.addFloatingText(x, y - 10, 'BLOCKED', '#64c8ff');
       Audio.asteroid();
     } else {
       this.loseLife();
-      Renderer.addParticles(bullet.x, bullet.y, '255, 85, 102', 12);
+      Renderer.addParticles(x, y, colorRGB || '255, 85, 102', 12);
     }
   },
 
@@ -360,6 +409,7 @@ const Game = {
     document.getElementById('score').textContent = this.score;
     this.enemyBullets = [];
     this.boss = null;
+    this.updateBossHUD();
 
     if (this.lives < this.maxLives) {
       this.lives++;
@@ -675,6 +725,7 @@ const Game = {
     document.getElementById('timer').textContent = Math.ceil(this.levelDuration / 1000);
     this.updateLivesDisplay();
     this.updateModuleHUD();
+    this.updateBossHUD();
 
     Spawner.init();
     Player.lastShot = 0;
@@ -710,6 +761,7 @@ const Game = {
   gameOver() {
     this.phase = 'gameover';
     Audio.gameover();
+    this.updateBossHUD();
     document.getElementById('final-score').textContent = this.score;
     document.getElementById('final-currency').textContent = this.currency;
     document.getElementById('final-level').textContent = this.currentLevel;
@@ -724,6 +776,7 @@ const Game = {
     if (this.phase !== 'playing') return;
     this.phase = 'paused';
     this.pauseSelectedIndex = 0;
+    this.updateBossHUD();
     document.getElementById('pause-menu').classList.remove('hidden');
     this.updatePauseMenuUI();
     Music.pause();
@@ -732,6 +785,7 @@ const Game = {
   resumeGame() {
     if (this.phase !== 'paused') return;
     this.phase = 'playing';
+    this.updateBossHUD();
     document.getElementById('pause-menu').classList.add('hidden');
     Music.resume();
   },
@@ -745,16 +799,21 @@ const Game = {
 
   pauseSelect() {
     if (this.phase !== 'paused') return;
-    if (this.pauseSelectedIndex === 0) {
-      this.resumeGame();
-    } else if (this.pauseSelectedIndex === 1) {
-      this.startBossTest();
-    } else {
+    const buttons = document.querySelectorAll('#pause-buttons button');
+    const btn = buttons[this.pauseSelectedIndex];
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    if (action === 'boss') {
+      this.startBossTest(btn.dataset.kind);
+    } else if (action === 'quit') {
       this.quitToTitle();
+    } else {
+      this.resumeGame();
     }
   },
 
-  startBossTest() {
+  startBossTest(kind) {
     if (this.phase !== 'paused') return;
     document.getElementById('pause-menu').classList.add('hidden');
     Music.resume();
@@ -769,20 +828,26 @@ const Game = {
     this.score = 0;
     document.getElementById('score').textContent = '0';
 
-    this.setupBossLevel(this.currentLevel);
+    this.setupBossLevel(this.currentLevel, kind);
   },
 
-  setupBossLevel(level) {
+  setupBossLevel(level, kind) {
     this.calcPlayArea();
     Player.lastShot = 0;
     this.enemyBullets = [];
-    this.boss = new Boss(this.canvas.width, this.canvas.height, this.playLeft, this.playRight, level || this.currentLevel);
+    this.boss = createBoss(
+      kind || 'NOYAU',
+      this.canvas.width, this.canvas.height, this.playLeft, this.playRight,
+      level || this.currentLevel
+    );
 
     document.getElementById('hud').classList.remove('hidden');
     document.getElementById('timer').textContent = 'BOSS';
+    this.updateBossHudPosition();
     this.updateLivesDisplay();
     this.updateModuleHUD();
     document.getElementById('shield-display').classList.add('hidden');
+    this.updateBossHUD();
   },
 
   updatePauseMenuUI() {
@@ -853,10 +918,6 @@ const Game = {
     Renderer.drawFloatingTexts(ctx);
 
     ctx.restore();
-
-    if (this.boss) {
-      this.boss.drawHPBar(ctx, w);
-    }
 
     Renderer.drawDamageOverlay(ctx, w, h);
   }
