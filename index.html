@@ -36,6 +36,10 @@
         <p>ZQSD to move</p>
         <p>SPACE to shoot</p>
       </div>
+      <div id="title-menu" class="menu-buttons">
+        <button id="title-start-btn" data-action="start">START</button>
+        <button id="title-options" data-action="options">OPTIONS</button>
+      </div>
       <p id="title-start">Press SPACE to start</p>
     </div>
 
@@ -67,14 +71,25 @@
       <p id="restart-hint">Press SPACE to restart</p>
     </div>
 
-    <div id="pause-menu" class="hidden">
+    <div id="pause-menu" class="menu-overlay hidden">
       <h1>PAUSE</h1>
-      <div id="pause-buttons">
+      <div id="pause-buttons" class="menu-buttons">
         <button id="pause-resume" data-action="resume">RESUME</button>
         <button id="pause-boss-noyau" data-action="boss" data-kind="NOYAU">TEST LE NOYAU</button>
         <button id="pause-boss-comete" data-action="boss" data-kind="COMETE">TEST LA COMÈTE</button>
         <button id="pause-boss-archi" data-action="boss" data-kind="ARCHITECTE">TEST L'ARCHITECTE</button>
+        <button id="pause-options" data-action="options">OPTIONS</button>
         <button id="pause-quit" data-action="quit">QUIT TO MENU</button>
+      </div>
+    </div>
+
+    <!-- Ecran options partage : ouvert depuis le menu titre ou depuis la pause. -->
+    <div id="options-screen" class="menu-overlay hidden">
+      <h1>OPTIONS</h1>
+      <div id="options-buttons" class="menu-buttons">
+        <button class="opt-toggle" data-action="toggle" data-key="sound">SOUND <span class="opt-value">ON</span></button>
+        <button class="opt-toggle" data-action="toggle" data-key="music">MUSIC <span class="opt-value">ON</span></button>
+        <button data-action="back">BACK</button>
       </div>
     </div>
   </div>
@@ -90,6 +105,7 @@
   <script src="js/boss-architecte.js"></script>
   <script src="js/renderer.js"></script>
   <script src="js/music.js"></script>
+  <script src="js/options.js"></script>
   <script src="js/game.js"></script>
   <script src="js/main.js"></script>
 </body>

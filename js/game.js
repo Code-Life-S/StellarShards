@@ -60,6 +60,11 @@ const Game = {
     this.currentLevel = DEBUG_START_LEVEL;
     this.rerollsLeft = 2;
     this.shopSelectedIndex = 0;
+    this.titleSelectedIndex = 0;
+    this.pauseSelectedIndex = 0;
+    this.optionsSelectedIndex = 0;
+    this.optionsOpen = false;
+    this.optionsReturn = null;
 
     Player.init(this.canvas.width, this.canvas.height);
     Spawner.init();
@@ -70,6 +75,8 @@ const Game = {
     document.getElementById('level-complete').classList.add('hidden');
     document.getElementById('shop-overlay').classList.add('hidden');
     document.getElementById('hud').classList.add('hidden');
+    document.getElementById('pause-menu').classList.add('hidden');
+    document.getElementById('options-screen').classList.add('hidden');
     document.getElementById('score').textContent = '0';
     document.getElementById('currency-display').textContent = '0';
     this.updateLivesDisplay();
@@ -796,27 +803,106 @@ const Game = {
     Music.resume();
   },
 
+  // --- Menus (titre / pause / options) ------------------------------------
+  // Un seul moteur de navigation : conteneur CSS + nom du champ d'index.
+
+  updateMenuUI(selector, indexProp) {
+    const buttons = document.querySelectorAll(selector);
+    buttons.forEach((btn, i) => {
+      btn.classList.toggle('selected', i === this[indexProp]);
+    });
+  },
+
+  menuNavigate(selector, indexProp, dir) {
+    const count = document.querySelectorAll(selector).length;
+    if (!count) return;
+    this[indexProp] = (this[indexProp] + dir + count) % count;
+    this.updateMenuUI(selector, indexProp);
+  },
+
   pauseNavigate(dir) {
-    if (this.phase !== 'paused') return;
-    const count = document.querySelectorAll('#pause-buttons button').length;
-    this.pauseSelectedIndex = (this.pauseSelectedIndex + dir + count) % count;
-    this.updatePauseMenuUI();
+    if (this.phase !== 'paused' || this.optionsOpen) return;
+    this.menuNavigate('#pause-buttons button', 'pauseSelectedIndex', dir);
   },
 
   pauseSelect() {
-    if (this.phase !== 'paused') return;
-    const buttons = document.querySelectorAll('#pause-buttons button');
-    const btn = buttons[this.pauseSelectedIndex];
+    if (this.phase !== 'paused' || this.optionsOpen) return;
+    const btn = document.querySelectorAll('#pause-buttons button')[this.pauseSelectedIndex];
     if (!btn) return;
 
     const action = btn.dataset.action;
     if (action === 'boss') {
       this.startBossTest(btn.dataset.kind);
+    } else if (action === 'options') {
+      this.openOptions();
     } else if (action === 'quit') {
       this.quitToTitle();
     } else {
       this.resumeGame();
     }
+  },
+
+  updatePauseMenuUI() {
+    this.updateMenuUI('#pause-buttons button', 'pauseSelectedIndex');
+  },
+
+  titleNavigate(dir) {
+    if (this.phase !== 'title' || this.optionsOpen) return;
+    this.menuNavigate('#title-menu button', 'titleSelectedIndex', dir);
+  },
+
+  titleSelect() {
+    if (this.phase !== 'title' || this.optionsOpen) return;
+    const btn = document.querySelectorAll('#title-menu button')[this.titleSelectedIndex];
+    if (!btn) return;
+    if (btn.dataset.action === 'options') this.openOptions();
+    else this.startGame();
+  },
+
+  // Ecran options ouvert par-dessus le titre ou par-dessus la pause : le jeu ne
+  // change pas de phase, on masque simplement l'ecran hote (sinon les deux
+  // menus translucides se melangent).
+  openOptions() {
+    this.optionsOpen = true;
+    this.optionsReturn = this.phase === 'paused' ? 'pause-menu' : 'title-screen';
+    this.optionsSelectedIndex = 0;
+    document.getElementById(this.optionsReturn).classList.add('hidden');
+    document.getElementById('options-screen').classList.remove('hidden');
+    this.updateOptionsUI();
+  },
+
+  closeOptions() {
+    if (!this.optionsOpen) return;
+    this.optionsOpen = false;
+    document.getElementById('options-screen').classList.add('hidden');
+    if (this.optionsReturn) {
+      document.getElementById(this.optionsReturn).classList.remove('hidden');
+      this.optionsReturn = null;
+    }
+  },
+
+  optionsNavigate(dir) {
+    if (!this.optionsOpen) return;
+    this.menuNavigate('#options-buttons button', 'optionsSelectedIndex', dir);
+  },
+
+  optionsSelect() {
+    if (!this.optionsOpen) return;
+    const btn = document.querySelectorAll('#options-buttons button')[this.optionsSelectedIndex];
+    if (!btn) return;
+    if (btn.dataset.action === 'toggle') Options.toggle(btn.dataset.key);
+    else this.closeOptions();
+    this.updateOptionsUI();
+  },
+
+  updateOptionsUI() {
+    document.querySelectorAll('#options-buttons button.opt-toggle').forEach(btn => {
+      const value = btn.querySelector('.opt-value');
+      const on = Options.data[btn.dataset.key];
+      value.textContent = Options.label(btn.dataset.key);
+      value.className = 'opt-value ' + (on ? 'on' : 'off');
+    });
+    this.updateMenuUI('#options-buttons button', 'optionsSelectedIndex');
   },
 
   startBossTest(kind) {
@@ -857,10 +943,7 @@ const Game = {
   },
 
   updatePauseMenuUI() {
-    const buttons = document.querySelectorAll('#pause-buttons button');
-    buttons.forEach((btn, i) => {
-      btn.classList.toggle('selected', i === this.pauseSelectedIndex);
-    });
+    this.updateMenuUI('#pause-buttons button', 'pauseSelectedIndex');
   },
 
   quitToTitle() {

@@ -1,8 +1,10 @@
 const Music = {
   ctx: null,
   enabled: false,
+  muted: false,
   tempo: 70,
   gain: null,
+  gainVolume: 0.20,
   scheduledTime: 0,
   timerID: null,
   loopDuration: 0,
@@ -38,8 +40,9 @@ const Music = {
     this.enabled = true;
     this.tempo = 70;
     this.gain = this.ctx.createGain();
-    this.gain.gain.setValueAtTime(0.20, this.ctx.currentTime);
-    this.gain.gain.linearRampToValueAtTime(0.20, this.ctx.currentTime + 0.5);
+    const vol = this.muted ? 0.001 : this.gainVolume;
+    this.gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+    this.gain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + 0.5);
     this.gain.connect(this.ctx.destination);
     this.scheduledTime = this.ctx.currentTime + 0.05;
     this.scheduleLoop();
@@ -64,6 +67,28 @@ const Music = {
 
   setTempo(bpm) {
     this.tempo = Math.max(85, Math.min(105, bpm));
+  },
+
+  // Toutes les notes passent par this.gain : couper ce gain coupe la musique
+  // sans interrompre la boucle ni rien reprogrammer.
+  _rampGain(target, ms) {
+    if (!this.ctx || !this.gain) return;
+    try {
+      const now = this.ctx.currentTime;
+      this.gain.gain.cancelScheduledValues(now);
+      this.gain.gain.setValueAtTime(this.gain.gain.value || target, now);
+      this.gain.gain.linearRampToValueAtTime(target, now + ms);
+    } catch (_) {}
+  },
+
+  mute() {
+    this.muted = true;
+    this._rampGain(0.001, 0.2);
+  },
+
+  unmute() {
+    this.muted = false;
+    this._rampGain(this.gainVolume, 0.2);
   },
 
   pause() {

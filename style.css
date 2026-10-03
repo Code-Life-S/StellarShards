@@ -518,7 +518,8 @@ html, body {
   }
 }
 
-#pause-menu {
+/* Overlays de menu partages : pause ET options. */
+.menu-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -533,25 +534,34 @@ html, body {
   pointer-events: auto;
 }
 
-#pause-menu.hidden {
+.menu-overlay.hidden {
   display: none;
 }
 
-#pause-menu h1 {
+.menu-overlay h1 {
   font-size: 48px;
   color: #fbbf24;
   margin-bottom: 32px;
   text-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
 }
 
-#pause-buttons {
+#options-screen {
+  z-index: 2; /* par-dessus de la pause quand elle est ouverte depuis celle-ci */
+}
+
+#title-menu {
+  pointer-events: auto;
+  margin-top: 8px;
+}
+
+.menu-buttons {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 220px;
 }
 
-#pause-buttons button {
+.menu-buttons button {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ccc;
@@ -563,21 +573,37 @@ html, body {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-#pause-buttons button:hover {
+.menu-buttons button:hover {
   background: rgba(100, 200, 255, 0.2);
   border-color: #64c8ff;
   color: #64c8ff;
 }
 
-#pause-buttons button:focus {
+.menu-buttons button:focus {
   outline: none;
   border-color: #64c8ff;
   box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.3);
 }
 
-#pause-buttons button.selected {
+.menu-buttons button.selected {
   background: rgba(100, 200, 255, 0.25);
   border-color: #64c8ff;
   color: #64c8ff;
   box-shadow: 0 0 15px rgba(100, 200, 255, 0.4), inset 0 0 15px rgba(100, 200, 255, 0.1);
+}
+
+/* Boutons option : libelle a gauche, etat ON/OFF a droite. */
+.menu-buttons button.opt-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.menu-buttons button .opt-value {
+  color: #64c8ff;
+}
+
+.menu-buttons button .opt-value.off {
+  color: #777;
 }

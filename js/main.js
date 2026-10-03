@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Audio.init();
   Input.init();
   Game.init();
+  Options.load();
 
   let lastTimestamp = 0;
 
@@ -14,7 +15,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const isNavUp = k => k === 'ArrowUp' || k === 'z' || k === 'Z';
+  const isNavDown = k => k === 'ArrowDown' || k === 's' || k === 'S';
+  const isSelect = k => k === 'Enter' || k === ' ';
+
   document.addEventListener('keydown', e => {
+    // Ecran options : pris en priorite, quel que soit l'ecran d'ouverture.
+    if (Game.optionsOpen) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        Game.closeOptions();
+      } else if (isNavUp(e.key) || isNavDown(e.key)) {
+        e.preventDefault();
+        Game.optionsNavigate(isNavUp(e.key) ? -1 : 1);
+      } else if (isSelect(e.key)) {
+        e.preventDefault();
+        Game.optionsSelect();
+      }
+      return;
+    }
     if (e.key === 'Escape') {
       e.preventDefault();
       if (Game.phase === 'playing') {
@@ -25,11 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (Game.phase === 'paused') {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'z' || e.key === 'Z' || e.key === 's' || e.key === 'S') {
+      if (isNavUp(e.key) || isNavDown(e.key)) {
         e.preventDefault();
-        const dir = (e.key === 'ArrowUp' || e.key === 'z' || e.key === 'Z') ? -1 : 1;
-        Game.pauseNavigate(dir);
-      } else if (e.key === 'Enter' || e.key === ' ') {
+        Game.pauseNavigate(isNavUp(e.key) ? -1 : 1);
+      } else if (isSelect(e.key)) {
         e.preventDefault();
         Game.pauseSelect();
       }
@@ -39,12 +57,22 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       if (Game.phase === 'playing') return;
       Audio.resume();
-      if (Game.phase === 'title' || Game.phase === 'gameover') {
+      if (Game.phase === 'title') {
+        Game.titleSelect();
+      } else if (Game.phase === 'gameover') {
         onMenuAction();
       } else if (Game.phase === 'levelComplete') {
         Game.openShop();
       } else if (Game.phase === 'shop') {
         Game.buySelectedCard();
+      }
+    } else if (Game.phase === 'title') {
+      if (isNavUp(e.key) || isNavDown(e.key)) {
+        e.preventDefault();
+        Game.titleNavigate(isNavUp(e.key) ? -1 : 1);
+      } else if (isSelect(e.key)) {
+        e.preventDefault();
+        Game.titleSelect();
       }
     } else if (Game.phase === 'shop') {
       if (e.key === 'q' || e.key === 'Q' || e.key === 'ArrowLeft') {
@@ -101,14 +129,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Menu pause : un seul ecouteur delogue (meme logique que le clavier via pauseSelect()).
-  document.getElementById('pause-buttons').addEventListener('click', e => {
-    const btn = e.target.closest('button');
-    if (!btn || Game.phase !== 'paused') return;
-    const buttons = document.querySelectorAll('#pause-buttons button');
-    Game.pauseSelectedIndex = Array.prototype.indexOf.call(buttons, btn);
-    Game.pauseSelect();
-  });
+  // Menus : un seul ecouteur delogue par conteneur, meme logique que le clavier.
+  function bindMenu(containerId, indexProp, selectFn) {
+    document.getElementById(containerId).addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const buttons = document.querySelectorAll('#' + containerId + ' button');
+      Game[indexProp] = Array.prototype.indexOf.call(buttons, btn);
+      Game.updateMenuUI('#' + containerId + ' button', indexProp);
+      Audio.resume();
+      selectFn();
+    });
+  }
+
+  bindMenu('pause-buttons', 'pauseSelectedIndex', () => Game.pauseSelect());
+  bindMenu('title-menu', 'titleSelectedIndex', () => Game.titleSelect());
+  bindMenu('options-buttons', 'optionsSelectedIndex', () => Game.optionsSelect());
 
   function gameLoop(timestamp) {
     if (!lastTimestamp) lastTimestamp = timestamp;

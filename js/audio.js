@@ -1,5 +1,6 @@
 const Audio = {
   ctx: null,
+  enabled: true,
 
   init() {
     try {
@@ -13,8 +14,10 @@ const Audio = {
     }
   },
 
+  // Les deux points de passage _tone/_noise sont les seuls emitters :
+  // couper Audio.enabled coupe tous les effets sonores d'un coup.
   _tone(freq, duration, type, volume) {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.enabled) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = type || 'square';
@@ -28,7 +31,7 @@ const Audio = {
   },
 
   _noise(duration, volume) {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.enabled) return;
     const bufferSize = Math.max(1, Math.floor(this.ctx.sampleRate * duration));
     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const data = buffer.getChannelData(0);
