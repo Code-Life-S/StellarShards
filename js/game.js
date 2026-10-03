@@ -362,9 +362,15 @@ const Game = {
 
       for (let ti = targets.length - 1; ti >= 0; ti--) {
         const t = targets[ti];
+        if (t.active === false) continue;
         const dx = m.x - t.x;
         const dy = m.y - t.y;
-        if (Math.sqrt(dx * dx + dy * dy) < m.size + t.radius) {
+        // Cible circulaire par defaut ; une cible peut definir contains() pour
+        // un impact rectangulaire (colonnes de L'Architecte).
+        const impact = t.contains
+          ? t.contains(m.x, m.y, m.size)
+          : Math.sqrt(dx * dx + dy * dy) < m.size + t.radius;
+        if (impact) {
           const destroyed = t.hit(m.damage);
           const points = t.points || 2;
           this.score += points;
