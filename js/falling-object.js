@@ -3,7 +3,7 @@ const OBJECT_TYPES = {
   DIAMOND:{ radius: 14, color: '#60a5fa', rgb: '96, 165, 250', label: '💎', destroyable: false, points: 25 },
   SKULL:  { radius: 16, color: '#c084fc', rgb: '192, 132, 252', label: '☠️', destroyable: true, points: 15 },
   INDESTRUCTIBLE: { radius: 20, color: '#b91c1c', rgb: '185, 28, 28', label: '🪨', destroyable: false, points: 0 },
-  POWERUP: { radius: 16, color: '#fbbf24', rgb: '251, 191, 36', label: '✨', destroyable: false, points: 0 }
+  HEART: { radius: 16, color: '#ff6b6b', rgb: '255, 107, 107', label: '❤️', destroyable: false, points: 0 }
 };
 
 class FallingObject {
@@ -64,8 +64,8 @@ class FallingObject {
       this.drawAsteroid(ctx);
       return;
     }
-    if (this.type === 'POWERUP') {
-      this.drawPowerup(ctx);
+    if (this.type === 'HEART') {
+      this.drawHeart(ctx);
       return;
     }
 
@@ -134,36 +134,41 @@ class FallingObject {
     ctx.fill();
   }
 
-  drawPowerup(ctx) {
-    const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.005);
+  drawHeart(ctx) {
+    const pulse = 1 + 0.12 * Math.sin(Date.now() * 0.006);
     const r = this.radius * pulse;
 
     const glow = ctx.createRadialGradient(
       this.x, this.y, 0,
       this.x, this.y, r * 3
     );
-    glow.addColorStop(0, 'rgba(251, 191, 36, 0.3)');
-    glow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+    glow.addColorStop(0, 'rgba(255, 107, 107, 0.35)');
+    glow.addColorStop(1, 'rgba(255, 107, 107, 0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(this.x, this.y, r * 3, 0, Math.PI * 2);
     ctx.fill();
 
-    const spikes = 5;
+    // Coeur construit dans un repere normalise (-10..10), puis mis a l'echelle.
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(r / 10, r / 10);
     ctx.beginPath();
-    for (let i = 0; i < spikes * 2; i++) {
-      const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
-      const rad = i % 2 === 0 ? r : r * 0.45;
-      const px = this.x + Math.cos(a) * rad;
-      const py = this.y + Math.sin(a) * rad;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
+    ctx.moveTo(0, 8);
+    ctx.bezierCurveTo(-14, -2, -9, -13, 0, -5);
+    ctx.bezierCurveTo(9, -13, 14, -2, 0, 8);
     ctx.closePath();
-    ctx.fillStyle = '#fbbf24';
-    ctx.shadowColor = '#fbbf24';
-    ctx.shadowBlur = 15;
+    const grad = ctx.createLinearGradient(0, -13, 0, 8);
+    grad.addColorStop(0, '#ff9a9a');
+    grad.addColorStop(1, '#e03131');
+    ctx.fillStyle = grad;
+    ctx.shadowColor = '#ff6b6b';
+    ctx.shadowBlur = 10;
     ctx.fill();
     ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.restore();
   }
 }

@@ -1,20 +1,20 @@
 const Spawner = {
   spawnInterval: 1200,
   lastSpawn: 0,
-  weights: { STAR: 45, DIAMOND: 15, SKULL: 30, INDESTRUCTIBLE: 0 },
+  weights: { STAR: 45, DIAMOND: 15, SKULL: 30, HEART: 12, INDESTRUCTIBLE: 0 },
   inPause: false,
   spawnPhaseEnd: 0,
   pausePhaseEnd: 0,
-  nextIsPowerup: false,
+  nextIsHeart: false,
 
   init() {
     this.spawnInterval = 1200;
     this.lastSpawn = 0;
-    this.weights = { STAR: 45, DIAMOND: 15, SKULL: 30, INDESTRUCTIBLE: 0 };
+    this.weights = { STAR: 45, DIAMOND: 15, SKULL: 30, HEART: 12, INDESTRUCTIBLE: 0 };
     this.inPause = false;
     this.spawnPhaseEnd = 0;
     this.pausePhaseEnd = 0;
-    this.nextIsPowerup = false;
+    this.nextIsHeart = false;
   },
 
   update(timestamp, objects, playLeft, playRight, difficulty, level) {
@@ -54,9 +54,9 @@ const Spawner = {
     const margin = 25;
     const x = playLeft + margin + Math.random() * (playRight - playLeft - margin * 2);
     let type;
-    if (this.nextIsPowerup) {
-      type = 'POWERUP';
-      this.nextIsPowerup = false;
+    if (this.nextIsHeart) {
+      type = 'HEART';
+      this.nextIsHeart = false;
     } else {
       type = this.pickType();
     }
@@ -66,8 +66,10 @@ const Spawner = {
     objects.push(obj);
   },
 
-  schedulePowerup() {
-    this.nextIsPowerup = true;
+  // Repere en ecran vide : le joueur a nettoye la vague, il est recompense
+  // d'un coeur (la progression d'arme passe par la boutique).
+  scheduleHeart() {
+    this.nextIsHeart = true;
   },
 
   pickType() {

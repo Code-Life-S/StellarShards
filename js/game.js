@@ -142,6 +142,7 @@ const Game = {
         STAR: Math.max(20, 55 - l * 4),
         DIAMOND: Math.max(5, 15 - l),
         SKULL: 15 + l * 6,
+        HEART: 12,
         INDESTRUCTIBLE: l >= 1 ? l * 5 : 0
       }
     };
@@ -242,7 +243,7 @@ const Game = {
     this.checkObjectCollisions();
 
     if (this.currentLevel >= 2 && this.objects.length === 0 && Spawner.inPause) {
-      Spawner.schedulePowerup();
+      Spawner.scheduleHeart();
     }
 
     Renderer.update(dt, this.canvas.width, this.canvas.height);
@@ -584,22 +585,21 @@ const Game = {
         Renderer.addFloatingText(obj.x, obj.y - 40, 'SHIELD!', '#64c8ff');
         Audio.shield();
       }
-      } else if (obj.type === 'POWERUP') {
-      const types = Object.keys(AUGMENTS).filter(t => {
-        const owned = Player.getAugment(t);
-        return !owned || owned.level < 5;
-      });
-      if (types.length > 0) {
-        const newType = types[Math.floor(Math.random() * types.length)];
-        Player.addAugment(newType);
-        this.updateModuleHUD();
-        const aug = Player.getAugment(newType);
-        const label = aug.level > 1 ? newType + ' Lv' + aug.level : newType;
-        Renderer.addParticles(obj.x, obj.y, '251, 191, 36', 15);
-        Renderer.addFloatingText(obj.x, obj.y - 10, label, '#fbbf24');
+      } else if (obj.type === 'HEART') {
+        // Soin : +1 vie. A vie pleine, le coeur se transforme en points pour
+        // ne jamais etre ramasse pour rien.
+        Renderer.addParticles(obj.x, obj.y, obj.colorRGB, 15);
+        if (this.lives < this.maxLives) {
+          this.lives++;
+          this.updateLivesDisplay();
+          Renderer.addFloatingText(obj.x, obj.y - 10, '+1 VIE', obj.color);
+        } else {
+          this.score += 30;
+          document.getElementById('score').textContent = this.score;
+          Renderer.addFloatingText(obj.x, obj.y - 10, '+30', obj.color);
+        }
         Audio.powerup();
-      }
-    } else {
+      } else {
       this.consecutiveStars = 0;
       if (this.hasShield) {
         this.breakShield();
@@ -986,7 +986,7 @@ const Game = {
 
   renderTitleDemo() {
     if (this.objects.length < 8 && Math.random() < 0.03) {
-      const types = ['STAR', 'DIAMOND', 'SKULL'];
+      const types = ['STAR', 'DIAMOND', 'SKULL', 'HEART'];
       const type = types[Math.floor(Math.random() * types.length)];
       const x = this.playLeft + 20 + Math.random() * (this.playRight - this.playLeft - 40);
       const speed = 1.5 + Math.random() * 2;
