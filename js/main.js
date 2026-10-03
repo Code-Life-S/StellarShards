@@ -107,6 +107,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  document.getElementById('pause-boss').addEventListener('click', () => {
+    if (Game.phase === 'paused') {
+      Game.startBossTest();
+    }
+  });
+
   document.getElementById('pause-quit').addEventListener('click', () => {
     if (Game.phase === 'paused') {
       Game.quitToTitle();

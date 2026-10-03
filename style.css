@@ -507,7 +507,7 @@ html, body {
   min-width: 220px;
 }
 
-#pause-resume, #pause-quit {
+#pause-resume, #pause-boss, #pause-quit {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ccc;
@@ -519,19 +519,19 @@ html, body {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-#pause-resume:hover, #pause-quit:hover {
+#pause-resume:hover, #pause-boss:hover, #pause-quit:hover {
   background: rgba(100, 200, 255, 0.2);
   border-color: #64c8ff;
   color: #64c8ff;
 }
 
-#pause-resume:focus, #pause-quit:focus {
+#pause-resume:focus, #pause-boss:focus, #pause-quit:focus {
   outline: none;
   border-color: #64c8ff;
   box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.3);
 }
 
-#pause-resume.selected, #pause-quit.selected {
+#pause-resume.selected, #pause-boss.selected, #pause-quit.selected {
   background: rgba(100, 200, 255, 0.25);
   border-color: #64c8ff;
   color: #64c8ff;
