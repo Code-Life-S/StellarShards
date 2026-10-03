@@ -428,6 +428,26 @@ html, body {
   opacity: 0.4;
 }
 
+/* Carte soin : accent rouge pour la distinguer des cartes d'armes. */
+.shop-card--life {
+  border-color: rgba(255, 107, 107, 0.55);
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.shop-card--life:hover {
+  border-color: rgba(255, 107, 107, 0.85);
+}
+
+.shop-card--life.selected {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 20px rgba(255, 107, 107, 0.35), inset 0 0 20px rgba(255, 107, 107, 0.08);
+  background: rgba(255, 107, 107, 0.14);
+}
+
+.shop-card--life .shop-card-name {
+  color: #ff6b6b;
+}
+
 .shop-card-name {
   font-size: 20px;
   font-weight: 700;

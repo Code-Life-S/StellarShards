@@ -15,7 +15,10 @@ const CONFIG = {
   // Progression : un niveau boss tous les `bossEvery` niveaux (5, 10, 15...),
   // les boss s'y succedent dans l'ordre de `bossRotation`.
   bossEvery: 5,
-  bossRotation: ['NOYAU', 'COMETE', 'ARCHITECTE']
+  bossRotation: ['NOYAU', 'COMETE', 'ARCHITECTE'],
+  // Carte soin de la boutique : presence aleatoire, prix fixe.
+  lifeCardChance: 0.5,
+  lifeCardPrice: 200
 };
 
 const Game = {
@@ -142,7 +145,7 @@ const Game = {
         STAR: Math.max(20, 55 - l * 4),
         DIAMOND: Math.max(5, 15 - l),
         SKULL: 15 + l * 6,
-        HEART: 12,
+        HEART: 5,
         INDESTRUCTIBLE: l >= 1 ? l * 5 : 0
       }
     };
@@ -690,6 +693,17 @@ const Game = {
       const price = 40 + level * 25;
       return { type, level, price };
     });
+
+    // Carte soin : non-inventaire, presence aleatoire a chaque visite.
+    if (Math.random() < CONFIG.lifeCardChance) {
+      this.shopCards.push({
+        type: 'MAX_LIFE',
+        label: '+1 VIE MAX',
+        subtitle: 'vie permanente',
+        level: 0,
+        price: CONFIG.lifeCardPrice
+      });
+    }
   },
 
   shopNavigate(dir) {
@@ -708,11 +722,12 @@ const Game = {
     this.shopCards.forEach((card, i) => {
       const el = document.createElement('div');
       el.className = 'shop-card' +
+        (card.type === 'MAX_LIFE' ? ' shop-card--life' : '') +
         (this.currency < card.price ? ' disabled' : '') +
         (i === this.shopSelectedIndex ? ' selected' : '');
       el.innerHTML =
-        '<div class="shop-card-name">' + card.type + '</div>' +
-        '<div class="shop-card-level">Lv.' + card.level + '</div>' +
+        '<div class="shop-card-name">' + (card.label || card.type) + '</div>' +
+        '<div class="shop-card-level">' + (card.subtitle || ('Lv.' + card.level)) + '</div>' +
         '<div class="shop-card-price">\u26A1 ' + card.price + '</div>' +
         '<button class="shop-buy-btn" data-index="' + i + '">BUY</button>';
       container.appendChild(el);
@@ -725,8 +740,15 @@ const Game = {
     const card = this.shopCards[index];
     if (!card || this.currency < card.price) return;
     this.currency -= card.price;
-    Player.addAugment(card.type);
-    this.updateModuleHUD();
+    if (card.type === 'MAX_LIFE') {
+      // Carte "vie" : monte le plafond et remplit les coeurs.
+      this.maxLives++;
+      this.lives = this.maxLives;
+      this.updateLivesDisplay();
+    } else {
+      Player.addAugment(card.type);
+      this.updateModuleHUD();
+    }
     Audio.shopBuy();
     this.closeShop();
   },
