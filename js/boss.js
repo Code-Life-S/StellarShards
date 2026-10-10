@@ -101,6 +101,13 @@ class BossBase {
     return 3;
   }
 
+  // Reglage de difficulte courant : `values` est un tableau indexe par niveau
+  // de difficulte (CONFIG.difficultyLevel, 0 = facile). Voir *_DIFF dans boss.
+  diff(values) {
+    const idx = Math.max(0, Math.min(values.length - 1, CONFIG.difficultyLevel || 0));
+    return values[idx];
+  }
+
   hit(damage) {
     if (this.invulnerable) return false;
     this.hp -= damage * this.damageMult;
@@ -136,6 +143,24 @@ class BossBase {
 // ---------------------------------------------------------------------------
 // LE NOYAU — turret statique, bullet-hell (radial + vise).
 // ---------------------------------------------------------------------------
+// Reglages de difficulte du NOYAU — un tableau par reglage, chaque entree
+// correspond a un niveau (index = CONFIG.difficultyLevel : FACILE, NORMAL,
+// DIFFICILE, EXPERT). Ajouter un niveau = ajouter une valeur a chaque tableau.
+//   intervalMul    : cadence entre deux attaques (plus grand = plus de repos).
+//   telegraphMul   : duree d'anticipation avant le tir.
+//   bulletSpeedMul : vitesse des balles.
+//   radialBonus    : balles radiales supplementaires par salve.
+//   aimedBonus     : balles vis supplementaires par salve.
+//   moveSpeedMul   : vitesse de va-et-vient horizontal.
+const NOYAU_DIFF = {
+  intervalMul:    [1.3, 1.0, 0.85, 0.7],
+  telegraphMul:   [1.4, 1.0, 0.9, 0.8],
+  bulletSpeedMul: [0.75, 1.0, 1.15, 1.3],
+  radialBonus:    [0, 0, 2, 4],
+  aimedBonus:     [0, 0, 1, 2],
+  moveSpeedMul:   [0.8, 1.0, 1.1, 1.2]
+};
+
 const NOYAU_PHASES = {
   1: { interval: 1600, telegraph: 380, radialCount: 10, radialSpeed: 2.6, aimedCount: 3, aimedSpread: 14, aimedSpeed: 4.0, moveSpeed: 0.0009 },
   2: { interval: 1100, telegraph: 320, radialCount: 14, radialSpeed: 3.0, aimedCount: 5, aimedSpread: 12, aimedSpeed: 4.6, moveSpeed: 0.0013 },
@@ -167,45 +192,50 @@ class BossNoyau extends BossBase {
     this.tick(dt);
 
     const center = (this.playLeft + this.playRight) / 2;
-    this.x = center + Math.sin(this.time * phase.moveSpeed) * this.amplitude;
+    this.x = center + Math.sin(this.time * phase.moveSpeed * this.diff(NOYAU_DIFF.moveSpeedMul)) * this.amplitude;
 
     if (this.pendingAttack === null) {
       this.attackTimer -= dt;
       if (this.attackTimer <= 0) {
         this.pendingAttack = (this.attackToggle++ % 2 === 0) ? 'radial' : 'aimed';
-        this.telegraph = phase.telegraph;
+        this.telegraph = phase.telegraph * this.diff(NOYAU_DIFF.telegraphMul);
       }
     } else {
       this.telegraph -= dt;
       if (this.telegraph <= 0) {
         this.fire(this.pendingAttack, player, spawnBullets);
         this.pendingAttack = null;
-        this.attackTimer = phase.interval;
+        this.attackTimer = phase.interval * this.diff(NOYAU_DIFF.intervalMul);
       }
     }
   }
 
   fire(kind, player, spawnBullets) {
     const phase = NOYAU_PHASES[this.getPhase()];
+    const speedMul = this.diff(NOYAU_DIFF.bulletSpeedMul);
     if (kind === 'radial') {
-      for (let i = 0; i < phase.radialCount; i++) {
-        const a = (i / phase.radialCount) * Math.PI * 2 + this.time * 0.001;
+      const count = phase.radialCount + this.diff(NOYAU_DIFF.radialBonus);
+      const speed = phase.radialSpeed * speedMul;
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2 + this.time * 0.001;
         spawnBullets.push(new EnemyBullet(
           this.x, this.y,
-          Math.cos(a) * phase.radialSpeed,
-          Math.sin(a) * phase.radialSpeed
+          Math.cos(a) * speed,
+          Math.sin(a) * speed
         ));
       }
     } else {
+      const count = phase.aimedCount + this.diff(NOYAU_DIFF.aimedBonus);
+      const speed = phase.aimedSpeed * speedMul;
       const base = Math.atan2(player.y - this.y, player.x - this.x);
       const step = phase.aimedSpread * Math.PI / 180;
-      const start = base - step * (phase.aimedCount - 1) / 2;
-      for (let i = 0; i < phase.aimedCount; i++) {
+      const start = base - step * (count - 1) / 2;
+      for (let i = 0; i < count; i++) {
         const a = start + i * step;
         spawnBullets.push(new EnemyBullet(
           this.x, this.y,
-          Math.cos(a) * phase.aimedSpeed,
-          Math.sin(a) * phase.aimedSpeed
+          Math.cos(a) * speed,
+          Math.sin(a) * speed
         ));
       }
     }

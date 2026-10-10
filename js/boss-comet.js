@@ -2,17 +2,36 @@
 // Cycle : REPOS (salves faibles) -> TELEGRAPH (ligne rouge) -> DASH (invulnerable,
 // laisse une trainee de feu) -> CHOC/ETOURDI (fenetre de dps, degats x1.5).
 // 3 phases selon les PV : cadence, vitesse, nombre de dashes enchaines.
+// Difficulte (rebonds, bulles de trainee, fenetres...) : constante COMETE_DIFF.
 
 const COMETE_PHASES = {
   1: { restTime: 1500, volleyDelay: 350, shotCount: 3, shotSpread: 16, shotSpeed: 3.6,
-       telegraph: 520, dashSpeed: 15, chain: 1, trailInterval: 100, trailLife: 2200,
+       telegraph: 520, dashSpeed: 15, chain: 1, trailInterval: 100,
        stun: 1300, vulnMult: 1.5 },
   2: { restTime: 1200, volleyDelay: 300, shotCount: 4, shotSpread: 14, shotSpeed: 4.2,
-       telegraph: 440, dashSpeed: 18, chain: 2, trailInterval: 85, trailLife: 2600,
+       telegraph: 440, dashSpeed: 18, chain: 2, trailInterval: 85,
        stun: 1100, vulnMult: 1.5 },
   3: { restTime: 950,  volleyDelay: 250, shotCount: 5, shotSpread: 12, shotSpeed: 4.8,
-       telegraph: 360, dashSpeed: 22, chain: 3, trailInterval: 70, trailLife: 3000,
+       telegraph: 360, dashSpeed: 22, chain: 3, trailInterval: 70,
        stun: 900,  vulnMult: 1.5 }
+};
+
+// Reglages de difficulte de LA COMETE.
+// Un tableau = un reglage ; chaque entree correspond a un niveau de difficulte
+// (index = CONFIG.difficultyLevel). Ajouter un niveau = ajouter une valeur
+// dans chaque tableau + une entree dans CONFIG.difficultyLevels.
+//   maxBounces    : rebonds (dashes enchaines) maximum.
+//                   Plafonne phase.chain, et depasse jusqu'a 4 si > 3.
+//   trailLife     : duree de vie (ms) des bulles de la trainee (obstacles).
+//   telegraphMul  : multiplicateur de la fenetre d'anticipation (dash).
+//   stunMul       : multiplicateur de la fenetre de vulnerabilite (DPS).
+//   shotCountBonus: balles supplementaires par salve.
+const COMETE_DIFF = {
+  maxBounces:    [2, 3, 4, 4],          // facile (defaut) -> expert
+  trailLife:     [1000, 2000, 3000, 4000],
+  telegraphMul:  [1.2, 1.0, 0.9, 0.8],
+  stunMul:       [1.3, 1.0, 0.85, 0.7],
+  shotCountBonus:[0, 0, 1, 2]
 };
 
 class BossComete extends BossBase {
@@ -49,6 +68,11 @@ class BossComete extends BossBase {
     return COMETE_PHASES[this.getPhase()].volleyDelay;
   }
 
+  // Reglage de difficulte courant (voir COMETE_DIFF).
+  d(key) {
+    return this.diff(COMETE_DIFF[key]);
+  }
+
   onResize(canvasWidth, canvasHeight, playLeft, playRight) {
     super.onResize(canvasWidth, canvasHeight, playLeft, playRight);
     this.homeY = canvasHeight * 0.19;
@@ -70,8 +94,9 @@ class BossComete extends BossBase {
 
   enterTelegraph(phase, player) {
     this.state = 'telegraph';
-    this.stateTimer = phase.telegraph;
-    this.telegraphDur = phase.telegraph;
+    const dur = phase.telegraph * this.d('telegraphMul');
+    this.stateTimer = dur;
+    this.telegraphDur = dur;
     this.lockDashTarget(player);
   }
 
@@ -98,7 +123,7 @@ class BossComete extends BossBase {
     this.invulnerable = false;
     this.contactDamage = 0;
     this.state = 'stun';
-    this.stateTimer = phase.stun;
+    this.stateTimer = phase.stun * this.d('stunMul');
     this.damageMult = phase.vulnMult;
     this.ramCooldown = 0;
     Renderer.shake(10, 300);
@@ -141,7 +166,10 @@ class BossComete extends BossBase {
 
   updateTelegraph(dt, phase, player) {
     if (this.stateTimer <= 0) {
-      this.dashesLeft = phase.chain;
+      // Rebonds max plafonnes par la difficulte (maxBounces).
+      const maxBounces = this.d('maxBounces');
+      const extra = Math.max(0, maxBounces - 3);
+      this.dashesLeft = Math.min(phase.chain, maxBounces) + extra;
       this.startDash(phase);
     }
   }
@@ -159,7 +187,7 @@ class BossComete extends BossBase {
         this.x, this.y,
         (Math.random() - 0.5) * 0.5,
         (Math.random() - 0.5) * 0.5,
-        7, phase.trailLife, '#ff9a3c'
+        7, this.d('trailLife'), '#ff9a3c'
       ));
     }
 
@@ -191,8 +219,9 @@ class BossComete extends BossBase {
   fireVolley(phase, player, spawnBullets) {
     const base = Math.atan2(player.y - this.y, player.x - this.x);
     const step = phase.shotSpread * Math.PI / 180;
-    const start = base - step * (phase.shotCount - 1) / 2;
-    for (let i = 0; i < phase.shotCount; i++) {
+    const count = phase.shotCount + this.d('shotCountBonus');
+    const start = base - step * (count - 1) / 2;
+    for (let i = 0; i < count; i++) {
       const a = start + i * step;
       spawnBullets.push(new EnemyBullet(
         this.x, this.y,

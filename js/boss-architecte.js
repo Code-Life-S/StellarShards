@@ -15,6 +15,24 @@
 // Nouveau : la cible peut fournir contains(mx, my, msize) pour un impact
 // rectangulaire plutot que circulaire.
 
+// Reglages de difficulte de L'ARCHITECTE — un tableau par reglage, chaque
+// entree correspond a un niveau (index = CONFIG.difficultyLevel).
+//   fireIntervalMul : cadence de tir des pilastres.
+//   burstBonus      : balles supplementaires par rafale.
+//   windowMsMul     : duree de la fenetre de vulnerabilite (DPS).
+//   shieldMult      : degats acceptes par le noyau tant qu'un pilastre vit
+//                     (plus grand = plus facile a entamer).
+//   pilastreHpMul   : robustesse des pilastres.
+//   colHpMul        : robustesse des colonnes.
+const ARCH_DIFF = {
+  fireIntervalMul: [1.35, 1.0, 0.85, 0.7],
+  burstBonus:      [0, 0, 0, 1],
+  windowMsMul:     [1.4, 1.0, 0.85, 0.7],
+  shieldMult:      [0.5, 0.25, 0.2, 0.15],
+  pilastreHpMul:   [0.7, 1.0, 1.3, 1.6],
+  colHpMul:        [0.75, 1.0, 1.2, 1.5]
+};
+
 const ARCH_PHASES = {
   1: { columns: 1, colOscSpeed: 0.0011, pilastreHp: 4, colHp: 8,  fireInterval: 2200, burst: 1, windowMs: 8000 },
   2: { columns: 2, colOscSpeed: 0.0016, pilastreHp: 6, colHp: 11, fireInterval: 1700, burst: 1, windowMs: 7000 },
@@ -103,7 +121,7 @@ class BossArchitecte extends BossBase {
     this.orbitX = 92;
     this.orbitY = 62;
     this.colWidth = 30;
-    this.damageMult = 0.25;
+    this.damageMult = this.diff(ARCH_DIFF.shieldMult);
     this.shieldWindow = 0;
     this.windowTotal = 1;
     this.pilastres = [];
@@ -111,7 +129,9 @@ class BossArchitecte extends BossBase {
 
     this.applyGeometry();
     this.y = this.homeY;
-    this.pilastres = [0, 1, 2, 3].map(i => new Pilastre(i, ARCH_PHASES[1].pilastreHp));
+    const p1 = ARCH_PHASES[1];
+    this.pilastres = [0, 1, 2, 3].map(i =>
+      new Pilastre(i, Math.round(p1.pilastreHp * this.diff(ARCH_DIFF.pilastreHpMul))));
     this.syncColumns(ARCH_PHASES[1]);
     this.updateColonnes(ARCH_PHASES[1], 0);
   }
@@ -143,7 +163,8 @@ class BossArchitecte extends BossBase {
 
   syncColumns(phase) {
     while (this.colonnes.length < phase.columns) {
-      this.colonnes.push(new Colonne(this.colWidth, phase.colHp));
+      this.colonnes.push(new Colonne(this.colWidth,
+        Math.round(phase.colHp * this.diff(ARCH_DIFF.colHpMul))));
     }
     while (this.colonnes.length > phase.columns) {
       this.colonnes.pop();
@@ -151,11 +172,12 @@ class BossArchitecte extends BossBase {
   }
 
   rebuild(phase) {
-    this.pilastres = [0, 1, 2, 3].map(i => new Pilastre(i, phase.pilastreHp));
+    this.pilastres = [0, 1, 2, 3].map(i =>
+      new Pilastre(i, Math.round(phase.pilastreHp * this.diff(ARCH_DIFF.pilastreHpMul))));
     this.colonnes = [];
     this.syncColumns(phase);
     this.updateColonnes(phase, 0);
-    this.damageMult = 0.25;
+    this.damageMult = this.diff(ARCH_DIFF.shieldMult);
     Renderer.addParticles(this.x, this.y, '56, 189, 248', 24);
     Audio.spread();
   }
@@ -201,15 +223,15 @@ class BossArchitecte extends BossBase {
 
     if (alive > 0) {
       this.shieldWindow = 0;
-      this.damageMult = 0.25;
+      this.damageMult = this.diff(ARCH_DIFF.shieldMult);
       return;
     }
 
     this.damageMult = 1;
 
     if (this.shieldWindow <= 0) {
-      this.shieldWindow = phase.windowMs;
-      this.windowTotal = phase.windowMs;
+      this.shieldWindow = phase.windowMs * this.diff(ARCH_DIFF.windowMsMul);
+      this.windowTotal = this.shieldWindow;
       for (const c of this.colonnes) {
         c.active = false;
         c.retracted = true;
@@ -258,11 +280,12 @@ class BossArchitecte extends BossBase {
       if (!p.active) continue;
       p.fireTimer -= dt;
       if (p.fireTimer > 0) continue;
-      p.fireTimer = phase.fireInterval;
+      p.fireTimer = phase.fireInterval * this.diff(ARCH_DIFF.fireIntervalMul);
 
       const base = Math.atan2(player.y - p.y, player.x - p.x);
-      for (let b = 0; b < phase.burst; b++) {
-        const off = (b - (phase.burst - 1) / 2) * 0.16;
+      const burst = phase.burst + this.diff(ARCH_DIFF.burstBonus);
+      for (let b = 0; b < burst; b++) {
+        const off = (b - (burst - 1) / 2) * 0.16;
         spawnBullets.push(new EnemyBullet(
           p.x, p.y,
           Math.cos(base + off) * 3.4,

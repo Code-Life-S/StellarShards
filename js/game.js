@@ -16,6 +16,11 @@ const CONFIG = {
   // les boss s'y succedent dans l'ordre de `bossRotation`.
   bossEvery: 5,
   bossRotation: ['NOYAU', 'COMETE', 'ARCHITECTE'],
+  // Difficulte globale : index dans les tableaux `*_DIFF` des boss
+  // (0 = facile, defaut). Ajouter un niveau = ajouter une valeur a chaque
+  // tableau de reglage + une etiquette ici.
+  difficultyLevel: 1,
+  difficultyLevels: ['FACILE', 'NORMAL', 'DIFFICILE', 'EXPERT'],
   // Carte soin de la boutique : presence aleatoire, prix fixe.
   lifeCardChance: 0.5,
   lifeCardPrice: 200
